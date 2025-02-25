@@ -18,14 +18,14 @@ image::1-1.png[1-1]
 
 [IMPORTANT]
 ====
-실습을 진행하는 동안 *고유한 사용자 이름(e.g. `%USERID%`) *을 사용해야 합니다.  예를 들어, 자신의 고유한 ID가 포함된 프로젝트에 애플리케이션을 배포해야 합니다. (e.g. retail-%USERID%).
+실습을 진행하는 동안 *고유한 사용자 이름(e.g. `%USERID%`)*을 사용해야 합니다.  예를 들어, 자신의 고유한 ID가 포함된 프로젝트에 애플리케이션을 배포해야 합니다. (e.g. retail-%USERID%).
 ====
 
 
 
 == OpenShift cluster 접속
 
-워크숍 실습 메인페이지의 'OpenShift Console'링크를 클릭하여 OpenShift 웹콘솔에 접속합니다.
+워크숍 실습 메인페이지의 'OpenShift Console' 링크를 클릭하여 OpenShift 웹콘솔에 접속합니다.
 
 image::2-2.png[2-2]
 
