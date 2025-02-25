@@ -3,7 +3,7 @@ runtime:
 
 site:
   title: DevNation Workshop - Kubernetes
-  start_page: mad-dev-guides-m2::1-introduction.adoc
+  start_page: kubernetes-tutorial::1-introduction.adoc
 
 content:
   sources:
