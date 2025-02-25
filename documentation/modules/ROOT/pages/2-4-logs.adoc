@@ -1,0 +1,372 @@
+= OpenShift Logging
+OpenShift Logging은 클러스터의 모든 포드 및 노드에서 로그 메시지를 수집하고 집계합니다. 사용자와 관리자는 OpenShift 웹 콘솔을 사용하여 로그 항목을 검색하고 참조할 수 있습니다.
+
+워크로드 및 클러스터 크기에 따라 많은 로그를 처리하는 데 상당한 디스크 공간과 컴퓨팅 리소스가 필요할 수 있으며, 이러한 경우 애플리케이션 워크로드에 사용할 수 없습니다. 이러한 시나리오에서는 추가 부하를 처리하기 위해 더 많은 계산 노드를 배포하고 스토리지 용량을 늘려야 할 수 있습니다.
+
+로그를 장기 저장을 위해 타사 로그 애그리게이터로 전달하거나 추가 분석을 위해 통합 가시성 플랫폼으로 전달하고 클러스터의 리소스 요구 사항을 최소화하도록 OpenShift Logging을 구성합니다.
+
+다음은 OpenShift Logging에서 로그를 수신할 수 있는 타사 로깅 솔루션의 예입니다.
+
+* Elasticsearch
+
+* Grafana Loki
+
+* Splunk
+
+* Amazon CloudWatch
+
+* Google Cloud Logging
+
+== OpenShift Logging 구성 요소
+OpenShift Logging은 수집기, 로그 저장소, 시각화 콘솔과 같은 구성 요소를 기반으로 합니다. 전체 로깅 솔루션으로 함께 배포하거나 수집기를 단독으로 배포하고 외부 솔루션에 로그를 저장할 수 있습니다.
+
+image::2-6.png[2-6]
+
+* *로그 수집기*
+수집기는 OpenShift Logging의 기본 구성 요소입니다. OpenShift Logging은 Vector를 사용하여 실행 중인 모든 컨테이너 및 클러스터 노드에서 로그를 수집하고, 이전 버전의 OpenShift Logging에서 수집기였던 Fluentd를 대체합니다.
+
+Vector는 클러스터에서 다양한 로그 유형을 수집한 후 다음 범주로 그룹화합니다.
+
+-  *인프라*
+인프라 로그에는 openshift-*, kube*, default 네임스페이스의 컨테이너 로그와 클러스터 노드의 시스템 로그가 포함됩니다.
+
+- *감사*
+감사 로그에는 Kubernetes API 및 OpenShift API 감사 로그와 클러스터 노드의 Linux 감사 로그가 모두 포함됩니다. 이러한 로그에는 중요한 보안 세부 정보가 포함될 수 있으며 OpenShift Logging은 기본적으로 이러한 세부 정보를 저장하지 않습니다.
+
+- *애플리케이션*
+애플리케이션 로그는 모두 사용자 프로젝트의 컨테이너 로그입니다.
+
+이러한 로그를 수집하기 위해 Vector는 클러스터에 설정된 데몬으로 실행되므로 모든 노드에서 실행됩니다.
+
+Vector는 로그 수집 외에도 메타데이터를 추가하여 로그의 출처를 설명하고 로그를 클러스터 내부 또는 외부에 있는 로그 저장소에 전달합니다.
+
+* *로그 저장소*
+로그 저장소는 Grafana Loki를 사용하여 전체 클러스터의 로그를 중앙 위치에 집계하고 로그에 대한 액세스 제어를 제공합니다.
+
+Loki는 이전 버전의 로깅 하위 시스템에서 로그 저장소였던 Elasticsearch를 대체합니다.
+
+내부 로그 저장소는 OpenShift Logging의 선택적 구성 요소입니다.
+
+* *시각화*
+OpenShift Logging은 내부 로그 저장소의 로그를 보고 쿼리할 수 있는 네이티브 OpenShift Console 플러그인을 제공합니다.
+
+OpenShift Logging UI 구성 요소는 이전 버전의 OpenShift Logging에서 웹 인터페이스였던 Kibana를 대체합니다.
+
+
+= Logs
+
+애플리케이션(배포)이 실행 중인지 확인하세요.:
+
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc new-project log-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+namespace/log-%userid% created
+----
+
+NOTE: `oc new-project  log-%userid%` : log-%userid%라는 새 프로젝트(네임스페이스)를 생성합니다.
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project log-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "log-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 log-%userid%로 변경합니다.
+
+
+[#create-deployment]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+        env: dev
+    spec:
+      containers:
+      - name: myapp
+        image: quay.io/rhdevelopers/myboot:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+EOF
+----
+
+3개의 복제본(애플리케이션의 3개 포드/인스턴스)을 실행하고 있는지 확인하세요.:
+
+[#logs-get-replicas]
+[.console-input]
+[source, bash]
+----
+oc get deployment my-deployment -o json | jq '.status.replicas'
+----
+
+[.console-output]
+[source,bash]
+----
+3
+----
+
+그렇지 않은 경우 최대 3개까지 확장하세요.:
+
+[#logs-scale-replicas]
+[.console-input]
+[source, bash]
+----
+oc scale --replicas=3 deployment/my-deployment
+----
+
+3개의 pod가 배포되어 동작중인지 확인합니다.
+
+[#logs-scale-replicas]
+[.console-input]
+[source, bash]
+----
+oc get pod
+----
+
+
+[.console-output]
+[source,bash]
+----
+NAME                             READY   STATUS    RESTARTS   AGE
+my-deployment-5dc67997c7-5bq4n   1/1     Running   0          34s
+my-deployment-5dc67997c7-m7z9f   1/1     Running   0          34s
+my-deployment-5dc67997c7-s4jc6   1/1     Running   0          34s
+----
+
+하나의 pod에서 발생 중인 로그를 확인합니다.
+
+[#logs-log-deployment]
+[.console-input]
+[source, bash]
+----
+oc logs my-deployment-5dc67997c7-m7z9f
+----
+
+IMPORTANT: pod 이름( my-deployment-5dc67997c7-m7z9f)은 각 실습 클러스터에서 조회 된 값으로 변경하여 입력하세요.
+
+
+[.console-output]
+[source]
+----
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v1.5.3.RELEASE)
+
+----
+
+NOTE: `-f` 매개변수를 사용하여 로그를 실시간으로 출력할 수 있습니다.
+
+[#logs-log-deployment-follow]
+[.console-input]
+[source, bash]
+----
+oc logs my-deployment-5dc67997c7-m7z9f -f
+----
+
+아래는  *다른 터미널(Terminal#2)*에서 실행하세요.:
+
+* *Terminal#2에서 수행*
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project log-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "log-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 log-%userid%로 변경합니다.
+
+
+[.console-input]
+[source,bash]
+----
+oc exec -it my-deployment-5dc67997c7-m7z9f /bin/bash
+----
+
+IMPORTANT: pod 이름( my-deployment-5dc67997c7-m7z9f)은 각 실습 클러스터에서 조회 된 값으로 변경하여 입력하세요.
+
+[.console-input]
+[source,bash]
+----
+curl localhost:8080
+----
+
+[.console-output]
+[source,bash]
+----
+Aloha from my-deployment-5dc67997c7-m7z9f
+----
+
+NOTE: [ctrl+c]를 입력하여 pod 명령어 실행(쉘) 모드를 종료할 수 있습니다.
+
+
+
+*다른 터미널(Terminal#3)* 에서 'my-deployment'에 대한 서비스를 배포하세요.:
+
+* *Terminal#3에서 수행*
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project log-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "log-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 log-%userid%로 변경합니다.
+
+
+[#create-service]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: the-service
+spec:
+  selector:
+    app: myapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
+EOF
+----
+
+해당 서비스를 반복적으로 curl 하세요.:
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+IP=$(kubectl get service the-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+----
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+PORT=$(kubectl get service the-service -o jsonpath="{.spec.ports[*].port}")
+----
+
+
+[#poll-endpoint]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+while true
+do curl $IP:$PORT
+sleep 0.8
+done
+----
+
+
+그런 다음 -f 옵션을 사용하여 Pod의 실시간 로그를 봅니다.:
+
+
+* *Terminal#1에서 수행*
+
+
+[#logs-log-deployment-follow]
+[.console-input]
+[source, bash]
+----
+oc logs my-deployment-5dc67997c7-m7z9f -f
+----
+
+NOTE: `-f` 매개변수를 사용하여 로그를 실시간으로 출력할 수 있습니다.
+
+IMPORTANT: pod 이름( my-deployment-5dc67997c7-m7z9f)은 각 실습 클러스터에서 조회 된 값으로 변경하여 입력하세요.
+
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Aloha from my-deployment-59cb8f6c56-bfrg7 124
+Aloha from my-deployment-59cb8f6c56-bfrg7 125
+Aloha from my-deployment-59cb8f6c56-bfrg7 126
+Aloha from my-deployment-59cb8f6c56-bfrg7 127
+Aloha from my-deployment-59cb8f6c56-bfrg7 128
+Aloha from my-deployment-59cb8f6c56-bfrg7 129
+Aloha from my-deployment-59cb8f6c56-bfrg7 130
+Aloha from my-deployment-59cb8f6c56-bfrg7 131
+Aloha from my-deployment-59cb8f6c56-bfrg7 132
+Aloha from my-deployment-59cb8f6c56-bfrg7 133
+Aloha from my-deployment-59cb8f6c56-bfrg7 134
+Aloha from my-deployment-59cb8f6c56-bfrg7 135
+Aloha from my-deployment-59cb8f6c56-bfrg7 136
+Aloha from my-deployment-59cb8f6c56-bfrg7 137
+Aloha from my-deployment-59cb8f6c56-bfrg7 138
+Aloha from my-deployment-59cb8f6c56-bfrg7 139
+Aloha from my-deployment-59cb8f6c56-bfrg7 140
+----
+
+
+
+NOTE: [ctrl+c]를 입력하여 반복 로그 조회를 종료할 수 있습니다.
+
+
+
+
+
+== Clean Up
+
+[#clean-up]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete service the-service
+----
+
+[#clean-up]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete deployment my-deployment
+----

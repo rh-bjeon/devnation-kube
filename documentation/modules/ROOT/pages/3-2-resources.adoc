@@ -1,0 +1,851 @@
+= 애플리케이션의 컴퓨팅 용량 제한
+
+Kubernetes가 다른 애플리케이션을 보호할 수 있도록 리소스 제한으로 애플리케이션을 구성합니다.
+
+컨테이너에 대해 정의한 메모리 및 CPU 요청은 Red Hat OpenShift Container Platform(RHOCP)에서 포드를 실행할 Compute 노드를 선택하는 데 도움이 됩니다. 그러나 이러한 리소스 요청은 컨테이너에서 사용할 수 있는 메모리와 CPU를 제한하지 않습니다. 예를 들어 메모리 요청을 1 GiB로 설정해도 컨테이너가 더 많은 메모리를 사용하는 것을 방지할 수는 없습니다.
+
+Red Hat은 메모리 및 CPU 요청을 애플리케이션의 최대 사용량으로 설정할 것을 권장합니다. 반대로 더 낮은 값을 설정하면 노드 리소스를 과다 할당합니다. 노드에서 실행 중인 모든 애플리케이션이 요청한 값보다 많은 리소스를 사용하기 시작하면 Compute 노드에서 메모리와 CPU가 부족할 수 있습니다.
+
+요청 외에도 메모리 및 CPU 제한 을 설정하여 애플리케이션에서 리소스를 너무 많이 사용하지 않게 할 수 있습니다.
+
+== 메모리 제한 설정
+메모리 제한은 컨테이너가 모든 프로세스에서 사용할 수 있는 메모리 양을 지정합니다.
+
+컨테이너가 제한에 도달하는 즉시 Compute 노드는 컨테이너에서 프로세스를 선택한 다음 종료합니다. 해당 이벤트가 발생하면 RHOCP는 기본 컨테이너 프로세스가 누락되었거나 상태 프로브에서 오류를 보고하여 애플리케이션이 더 이상 작동하지 않음을 감지합니다. 그런 다음 RHOCP는 포드 restartPolicy 특성(기본값은 Always)에 따라 컨테이너를 다시 시작합니다.
+
+RHOCP는 Linux 커널 기능을 사용하여 리소스 제한을 구현하고 메모리 제한에 도달하는 컨테이너의 프로세스를 종료합니다.
+
+=== cGroups(제어 그룹)
+RHOCP는 제어 그룹을 사용하여 리소스 제한을 구현합니다. 제어 그룹은 CPU 및 메모리와 같은 시스템 리소스를 제어하고 모니터링하기 위한 Linux 커널 메커니즘입니다.
+
+=== 메모리 부족 킬러(OOM 킬러)
+컨테이너가 메모리 제한에 도달하면 Linux 커널이 OOM 킬러 하위 시스템을 트리거하여 프로세스를 선택한 다음 종료합니다.
+
+애플리케이션에 메모리 누수가 있는 경우와 같이 완화해야 하는 메모리 사용 패턴이 애플리케이션에 있는 경우 메모리 제한을 설정해야 합니다. 메모리 누수는 애플리케이션의 버그로, 애플리케이션에서 일부 메모리를 사용하지만 사용한 후 메모리를 해제하지 않을 때 발생합니다. 누수가 무한 서비스 루프에 나타나면 애플리케이션이 시간이 지남에 따라 점점 더 많은 메모리를 사용하고 결국 시스템에서 사용 가능한 모든 메모리를 사용할 수 있습니다. 이러한 애플리케이션의 경우 메모리 제한을 설정하면 노드의 모든 메모리가 사용되지 않습니다. 또한 메모리 제한을 통해 OpenShift는 애플리케이션을 정기적으로 다시 시작하여 메모리 제한에 도달하면 메모리를 확보할 수 있습니다.
+
+포드의 컨테이너에 대한 메모리 제한을 설정하려면 oc set resources 명령을 사용합니다.
+
+[.console-output]
+[source,bash]
+----
+[user@host ~]$ oc set resources deployment/hello --limits memory=1Gi
+----
+
+oc set resources 명령 외에도 YAML 형식의 파일에서 리소스 제한을 정의할 수 있습니다.
+
+[.console-output]
+[source,bash]
+----
+apiVersion: apps/v1
+kind: Deployment
+...output omitted...
+  spec:
+    containers:
+    - image: registry.access.redhat.com/ubi9/nginx-120:1-86
+      name: hello
+      resources:
+        requests:
+          cpu: 100m
+          memory: 500Mi
+        limits:
+          cpu: 200m
+          memory: 1Gi
+----
+
+
+RHOCP가 OOM 이벤트로 인해 포드를 다시 시작하면 포드의 lastState 속성을 업데이트하고 이유를 OOMKilled로 설정합니다.
+
+[.console-output]
+[source,bash]
+----
+[user@host ~]$ oc get pod hello-67645f4865-vvr42 -o yaml
+...output omitted...
+status:
+...output omitted...
+  containerStatuses:
+  - containerID: cri-o://806b...9fe7
+    image: registry.access.redhat.com/ubi9/nginx-120:1-86
+    imageID: registry.access.redhat.com/ubi9/nginx-120:1-86@sha256:1403...fd34
+    lastState:
+      terminated:
+        containerID: cri-o://bbc4...9eb2
+        exitCode: 137
+        finishedAt: "2023-03-08T07:56:06Z"
+        reason: OOMKilled
+        startedAt: "2023-03-08T07:51:43Z"
+    name: hello
+    ready: true
+    restartCount: 1
+...output omitted...
+----
+
+
+= CPU 제한 설정
+CPU 제한은 메모리 제한과 다르게 작동합니다. 컨테이너가 CPU 제한에 도달하면 노드에 사용 가능한 CPU 주기가 있더라도 RHOCP에서 컨테이너의 프로세스를 금지합니다. 애플리케이션은 계속 작동하지만 속도가 느립니다.
+
+반대로 CPU 제한을 설정하지 않으면 컨테이너는 노드에서 사용 가능한 CPU를 최대한 사용할 수 있습니다. 예를 들어 여러 컨테이너에서 CPU 집약적인 작업을 실행하기 때문에 노드의 CPU에 압력이 가해지면 Linux 커널은 컨테이너의 CPU 요청 값에 따라 이러한 모든 컨테이너 간에 CPU 리소스를 공유합니다.
+
+클러스터 및 노드에서 일관된 애플리케이션 동작이 필요한 경우 CPU 제한을 설정해야 합니다. 예를 들어 애플리케이션이 CPU를 사용할 수 있는 노드에서 실행되는 경우 애플리케이션을 최고 속도로 실행할 수 있습니다. 반면에 애플리케이션이 CPU 압력이 있는 노드에서 실행되는 경우 애플리케이션 실행 속도가 느려집니다.
+
+개발 클러스터와 프로덕션 클러스터 간에 동일한 동작이 발생할 수 있습니다. 두 환경의 노드 구성이 다를 수 있으므로 개발 환경에서 프로덕션 환경으로 이동할 때 애플리케이션이 다르게 실행될 수 있습니다.
+
+NOTE: 클러스터에는 제한 사항을 초과하는 하드웨어 구성의 차이가 있을 수 있습니다. 예를 들어 두 클러스터의 노드에는 코어 수가 동일하고 클록 속도가 동일하지 않은 CPU가 있을 수 있습니다. +
+요청 및 제한은 이러한 하드웨어 차이를 고려하지 않습니다. 클러스터가 이러한 방식으로 다른 경우 두 구성에 모두 요청 및 제한이 적절한지 확인합니다.
+
+
+CPU 제한을 설정하면 노드 구성 간의 차이를 완화하고 보다 일관된 동작을 경험할 수 있습니다.
+
+포드의 컨테이너에 대한 CPU 제한을 설정하려면 oc set resources 명령을 사용합니다.
+
+[.console-output]
+[source,bash]
+----
+[user@host ~]$ oc set resources deployment/hello --limits cpu=200m
+YAML 포맷의 파일에서 CPU 제한을 정의할 수도 있습니다.
+
+apiVersion: apps/v1
+kind: Deployment
+...output omitted...
+  spec:
+    containers:
+    - image: registry.access.redhat.com/ubi9/nginx-120:1-86
+      name: hello
+      resources:
+        requests:
+          cpu: 100m
+          memory: 500Mi
+        limits:
+          cpu: 200m
+          memory: 1Gi
+[.console-output]
+[source,bash]
+----
+
+
+= Resources and Limits
+
+네임스페이스를 생성 후, 올바른 네임스페이스에 있는지 확인하세요.
+
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc new-project resource-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+namespace/resource-%userid% created
+----
+
+NOTE: `oc new-project resource-%userid%` : resource-%userid%라는 새 프로젝트(네임스페이스)를 생성합니다.
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project resource-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "resource-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+
+
+
+네임스페이스에서 아무것도 실행되고 있지 않은지 확인하세요.
+
+[#no-resources-resource]
+[.console-input]
+[source, bash]
+----
+oc get all
+----
+
+[.console-output]
+[source,bash]
+----
+No resources found in myspace namespace.
+----
+
+먼저 요청이나 제한 없이 애플리케이션을 배포하세요.:
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myboot
+  name: myboot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myboot
+  template:
+    metadata:
+      labels:
+        app: myboot
+    spec:
+      containers:
+      - name: myboot
+        image: quay.io/rhdevelopers/myboot:v1
+        ports:
+          - containerPort: 8080
+EOF
+----
+
+Pod 정보를 검색하세요.:
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+----
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+oc describe $PODNAME
+----
+
+
+[.console-output]
+[source,bash]
+----
+Name:             myboot-64b686f78-bmzcs
+Namespace:        resource-user2
+Priority:         0
+Service Account:  default
+Node:             ip-10-0-63-222.us-east-2.compute.internal/10.0.63.222
+Start Time:       Thu, 05 Dec 2024 05:58:49 +0000
+Labels:           app=myboot
+                  pod-template-hash=64b686f78
+Annotations:      k8s.ovn.org/pod-networks:
+                    {"default":{"ip_addresses":["10.128.2.158/23"],"mac_address":"0a:58:0a:80:02:9e","gateway_ips":["10.128.2.1"],"routes":[{"dest":"10.128.0....
+                  k8s.v1.cni.cncf.io/network-status:
+                    [{
+                        "name": "ovn-kubernetes",
+                        "interface": "eth0",
+                        "ips": [
+                            "10.128.2.158"
+                        ],
+                        "mac": "0a:58:0a:80:02:9e",
+                        "default": true,
+                        "dns": {}
+                    }]
+                  openshift.io/scc: restricted-v2
+                  seccomp.security.alpha.kubernetes.io/pod: runtime/default
+Status:           Running
+SeccompProfile:   RuntimeDefault
+IP:               10.128.2.158
+IPs:
+  IP:           10.128.2.158
+Controlled By:  ReplicaSet/myboot-64b686f78
+Containers:
+  myboot:
+    Container ID:   cri-o://41e937f361e491ae8edf84c6d166dc428ff1e31124f329edf2ec914f2792afd9
+    Image:          quay.io/rhdevelopers/myboot:v1
+    Image ID:       quay.io/rhdevelopers/myboot@sha256:ea9a142b694725fc7624cda0d7cf5484d7b28239dd3f1c768be16fc3eb7f1bd0
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 05 Dec 2024 05:58:49 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-vphnb (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  kube-api-access-vphnb:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+    ConfigMapName:           openshift-service-ca.crt
+    ConfigMapOptional:       <nil>
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason          Age   From               Message
+  ----    ------          ----  ----               -------
+  Normal  Scheduled       102s  default-scheduler  Successfully assigned resource-user2/myboot-64b686f78-bmzcs to ip-10-0-63-222.us-east-2.compute.internal
+  Normal  AddedInterface  102s  multus             Add eth0 [10.128.2.158/23] from ovn-kubernetes
+  Normal  Pulled          102s  kubelet            Container image "quay.io/rhdevelopers/myboot:v1" already present on machine
+  Normal  Created         102s  kubelet            Created container myboot
+  Normal  Started         102s  kubelet            Started container myboot
+----
+
+NOTE: Containers > myboot > Requests 항목이 없음을 확인하실 수 있습니다.(포드에 구성된 리소스 제한이 없는 것을 확인할 수 있습니다.)
+
+
+해당 배포를 삭제합니다.:
+
+[#delete-deployment-resource]
+[.console-input]
+[source, bash]
+----
+oc delete deployment myboot
+----
+
+리소스 요청을 포함하여 새 배포를 만듭니다.
+
+[#limits-resource]
+[.console-input]
+[source, bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myboot
+  name: myboot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myboot
+  template:
+    metadata:
+      labels:
+        app: myboot
+    spec:
+      containers:
+      - name: myboot
+        image: quay.io/rhdevelopers/myboot:v1
+        ports:
+          - containerPort: 8080
+        resources:
+          requests: 
+            memory: "300Mi" 
+            cpu: "100000m" # 100 cores
+EOF
+----
+
+그리고 Pod의 상태를 확인하세요.
+
+[#limits-get-pod-resource]
+[.console-input]
+[source, bash]
+----
+oc get pods
+----
+
+[.console-output]
+[source,bash]
+----
+NAME                      READY   STATUS    RESTARTS   AGE
+myboot-7b7d754c86-kjwlr   0/1     Pending   0          19s
+----
+
+오류에 대한 자세한 정보를 얻으려면 다음을 수행하십시오.
+
+[#get-events-resource]
+[.console-input]
+[source, bash]
+----
+oc get events --sort-by=.metadata.creationTimestamp
+----
+
+[.console-output]
+[source,bash]
+----
+<unknown>   Warning   FailedScheduling    pod/myboot-7b7d754c86-kjwlr    0/6 nodes are available: 6 Insufficient cpu.
+<unknown>   Warning   FailedScheduling    pod/myboot-7b7d754c86-kjwlr    0/6 nodes are available: 6 Insufficient cpu.
+----
+
+포드 사양의 "리소스 요청"에서는 하나 이상의 작업자 노드에 N개의 코어와 X용량의 메모리가 사용 가능해야 합니다.  요구 사항을 충족하는 작업자 노드가 없는 경우 이벤트 목록에 "PENDING" 및 해당 표기가 표시됩니다.
+
+Pod에서 `oc describe` 를 사용하여 실패에 대한 자세한 정보를 찾을 수도 있습니다.
+
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+----
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+oc describe $PODNAME
+----
+
+
+
+[.console-output]
+[source,bash]
+----
+Name:             myboot-68b858587-x6rh2
+Namespace:        resource-user2
+Priority:         0
+Service Account:  default
+Node:             <none>
+Labels:           app=myboot
+                  pod-template-hash=68b858587
+Annotations:      openshift.io/scc: restricted-v2
+                  seccomp.security.alpha.kubernetes.io/pod: runtime/default
+Status:           Pending
+SeccompProfile:   RuntimeDefault
+IP:               
+IPs:              <none>
+Controlled By:    ReplicaSet/myboot-68b858587
+Containers:
+  myboot:
+    Image:      quay.io/rhdevelopers/myboot:v1
+    Port:       8080/TCP
+    Host Port:  0/TCP
+    Requests:
+      cpu:        100
+      memory:     300Mi
+    Environment:  <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-cqgmz (ro)
+Conditions:
+  Type           Status
+  PodScheduled   False 
+Volumes:
+  kube-api-access-cqgmz:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+    ConfigMapName:           openshift-service-ca.crt
+    ConfigMapOptional:       <nil>
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/memory-pressure:NoSchedule op=Exists
+                             node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason            Age   From               Message
+  ----     ------            ----  ----               -------
+  Warning  FailedScheduling  16s   default-scheduler  0/7 nodes are available: 1 node(s) had untolerated taint {infra: reserved}, 3 Insufficient cpu, 3 node(s) had untolerated taint {node-role.kubernetes.io/master: }. preemption: 0/7 nodes are available: 3 No preemption victims found for incoming pod, 4 Preemption is not helpful for scheduling..
+----
+
+
+
+
+`replace`에 의해 수행된 변경 기록을 유지하면서 배포를 수정해야 합니다.
+
+[#apply-deployment-sane-limit-resource]
+[.console-input]
+[source, bash]
+----
+cat <<EOF | oc replace -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myboot
+  name: myboot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myboot
+  template:
+    metadata:
+      labels:
+        app: myboot
+    spec:
+      containers:
+      - name: myboot
+        image: quay.io/rhdevelopers/myboot:v1
+        ports:
+          - containerPort: 8080
+        resources:
+          requests: 
+            memory: "300Mi" 
+            cpu: "250m" # 1/4 core
+          # NOTE: These are the same limits we tested our Docker Container with earlier
+          # -m matches limits.memory and --cpus matches limits.cpu
+          limits:
+            memory: "900Mi"
+            cpu: "2000m" # 2 core
+EOF
+----
+
+위 명령어는 배포 템플릿을 대체하고 포드에 컨테이너 제한을 적용하도록 지시합니다.
+포드 정보를 확인하세요:
+
+
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+----
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+oc describe $PODNAME
+----
+
+
+
+[.console-output]
+[source,bash]
+----
+Name:             myboot-78f4859f45-cgnmt
+Namespace:        resource-user2
+Priority:         0
+Service Account:  default
+Node:             ip-10-0-63-222.us-east-2.compute.internal/10.0.63.222
+Start Time:       Thu, 05 Dec 2024 08:07:06 +0000
+Labels:           app=myboot
+                  pod-template-hash=78f4859f45
+Annotations:      k8s.ovn.org/pod-networks:
+                    {"default":{"ip_addresses":["10.128.2.165/23"],"mac_address":"0a:58:0a:80:02:a5","gateway_ips":["10.128.2.1"],"routes":[{"dest":"10.128.0....
+                  k8s.v1.cni.cncf.io/network-status:
+                    [{
+                        "name": "ovn-kubernetes",
+                        "interface": "eth0",
+                        "ips": [
+                            "10.128.2.165"
+                        ],
+                        "mac": "0a:58:0a:80:02:a5",
+                        "default": true,
+                        "dns": {}
+                    }]
+                  openshift.io/scc: restricted-v2
+                  seccomp.security.alpha.kubernetes.io/pod: runtime/default
+Status:           Running
+SeccompProfile:   RuntimeDefault
+IP:               10.128.2.165
+IPs:
+  IP:           10.128.2.165
+Controlled By:  ReplicaSet/myboot-78f4859f45
+Containers:
+  myboot:
+    Container ID:   cri-o://fbe2b6ceaca5bef737242a84b27623a5dbd316502242e2302a95dae3643fe003
+    Image:          quay.io/rhdevelopers/myboot:v1
+    Image ID:       quay.io/rhdevelopers/myboot@sha256:ea9a142b694725fc7624cda0d7cf5484d7b28239dd3f1c768be16fc3eb7f1bd0
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 05 Dec 2024 08:07:07 +0000
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     2
+      memory:  900Mi
+    Requests:
+      cpu:        250m
+      memory:     300Mi
+    Environment:  <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-qk7hb (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  kube-api-access-qk7hb:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+    ConfigMapName:           openshift-service-ca.crt
+    ConfigMapOptional:       <nil>
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/memory-pressure:NoSchedule op=Exists
+                             node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason          Age   From               Message
+  ----    ------          ----  ----               -------
+  Normal  Scheduled       30s   default-scheduler  Successfully assigned resource-user2/myboot-78f4859f45-cgnmt to ip-10-0-63-222.us-east-2.compute.internal
+  Normal  AddedInterface  29s   multus             Add eth0 [10.128.2.165/23] from ovn-kubernetes
+  Normal  Pulled          29s   kubelet            Container image "quay.io/rhdevelopers/myboot:v1" already present on machine
+  Normal  Created         29s   kubelet            Created container myboot
+  Normal  Started         29s   kubelet            Started container myboot
+----
+
+
+
+
+
+
+
+서비스를 배포합니다.
+
+[#apply-service-sane-limit-resource]
+[.console-input]
+[source, bash]
+----
+cat <<EOF | oc create -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: myboot
+  labels:
+    app: myboot    
+spec:
+  ports:
+  - name: http
+    port: 8080
+  selector:
+    app: myboot
+  type: LoadBalancer
+EOF
+----
+
+그리고 Pod를 살펴보세요.
+[#sysresources-sane-limit-resource]
+[.console-input]
+[source, bash]
+----
+watch -n 1 -- oc get pods
+----
+
+
+다른 터미널에서 해당 서비스를 반복하고 컬링합니다.
+* *Terminal#2에서 수행*
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project resource-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "resource-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+----
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+PORT=$(kubectl get service myboot -o jsonpath="{.spec.ports[*].port}")
+----
+
+
+Poll the endpoint:
+
+[#poll-endpoint]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+while true
+do curl $IP:$PORT
+sleep 0.8
+done
+----
+
+
+
+
+또 다른 터미널 창에서 /sysresources 엔드포인트를 컬링합니다.
+
+* *Terminal#3에서 수행*
+
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project resource-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "resource-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+----
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+PORT=$(kubectl get service myboot -o jsonpath="{.spec.ports[*].port}")
+----
+
+
+
+[#sysresources-sane-limit-resource]
+[.console-input]
+[source, bash]
+----
+curl $IP:$PORT/sysresources
+----
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+ Memory: 27305 Cores: 32
+----
+
+NOTE: 보고된 CPU/메모리와 리소스 제한에 설정된 내용을 보여줍니다.
+
+
+Pod의 resource 요청/제한 내용을 확인합니다.
+
+[#podresources-sane-limit-resource]
+[.console-input]
+[source, bash]
+----
+PODNAME=$(kubectl get pod -l app=myboot -o name)
+----
+
+[#podresources-sane-limit-resource]
+[.console-input]
+[source, bash]
+----
+oc get $PODNAME -o jsonpath='{.spec.containers[*].resources}'
+----
+
+
+[.console-output]
+[source,bash]
+----
+{"limits":{"cpu":"2","memory":"900Mi"},"requests":{"cpu":"250m","memory":"300Mi"}}
+----
+
+그런 다음 `/consume` 끝점을 `curl`합니다.
+
+[#consume-sane-limit-resource]
+[.console-input]
+[source, bash]
+----
+curl $IP:$PORT/consume
+----
+
+[.console-output]
+[source,bash]
+----
+curl: (52) Empty reply from server
+----
+
+그리고 루프도 실패한다는 것을 알 수 있습니다.
+
+* *Terminal#2*
+
+[.console-output]
+[source,bash]
+----
+Aloha from Spring Boot! 1120 on myboot-d78fb6d58-69kl7
+curl: (56) Recv failure: Connection reset by peer
+----
+
+오류를 확인하려면 포드를 확인하세요.
+
+
+* *Terminal#3*
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+----
+
+[#no-limits-resource]
+[.console-input]
+[source, bash]
+----
+oc describe $PODNAME
+----
+
+그리고 다음 부분을 찾아보세요.
+
+[.console-output]
+[source,bash]
+----
+   Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+----
+
+[#terminated-pod-resource]
+[.console-input]
+[source, bash]
+----
+ oc get $PODNAME -o jsonpath='{.status.containerStatuses[0].lastState.terminated'}
+----
+
+[.console-output]
+[source,bash]
+----
+{
+  "containerID": "cri-o://7b9be70ce4b616d6083d528dee708cea879da967373dad0d396fb999bd3898d3",
+  "exitCode": 137,
+  "finishedAt": "2020-03-29T19:14:56Z",
+  "reason": "OOMKilled",
+  "startedAt": "2020-03-29T18:50:15Z"
+}
+----
+
+* *Terminal#1*
+
+`watch oc get pods`의 STATUS 열에 OOMKilled가 반영되는 것을 볼 수도 있습니다.
+
+[.console-input]
+[source, bash]
+----
+ watch oc get pods
+----
+
+
+[.console-output]
+[source,bash]
+----
+NAME                     READY   STATUS      RESTARTS   AGE
+myboot-d78fb6d58-69kl7   0/1     OOMKilled   1          30m
+----
+
+NOTE: 그리고 Spring Boot Pod가 충돌할 때마다 RESTARTS 열이 증가하는 것을 볼 수 있습니다.

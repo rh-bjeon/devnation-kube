@@ -1,0 +1,332 @@
+= 소프트웨어 정의 네트워크(SDN)
+Kubernetes에서는 SDN(소프트웨어 정의 네트워킹)을 구현하여 클러스터와 사용자 애플리케이션의 네트워크 인프라를 관리합니다. SDN은 모든 클러스터 노드를 포함하는 가상 네트워크입니다. 가상 네트워크를 사용하면 클러스터 내부의 모든 컨테이너 또는 포드 간 통신이 가능합니다. Kubernetes 포드가 관리하는 클러스터 노드 프로세스는 SDN에 액세스할 수 있습니다. 그러나 SDN은 클러스터 외부에서 액세스하거나 클러스터 노드의 일반 프로세스에 액세스할 수 없습니다. 소프트웨어 정의 네트워킹 모델을 사용하면 여러 네트워크 계층의 요약을 통해 네트워크 서비스를 관리할 수 있습니다.
+
+SDN을 사용하면 조직 팀에서 애플리케이션을 노출하는 방법을 결정할 수 있도록 네트워크 트래픽 및 네트워크 리소스를 프로그래밍 방식으로 관리할 수 있습니다. SDN을 구현하면 기존 네트워킹 방식과 호환되는 모델이 생성됩니다. 포트 할당, IP 주소 임대 및 예약 측면에서 포드를 가상 시스템과 유사하게 만듭니다.
+
+SDN 설계를 사용하면 애플리케이션 구성 요소가 서로 통신하는 방법을 변경할 필요가 없기 때문에 레거시 애플리케이션을 컨테이너화하는 데 도움이 됩니다. 애플리케이션을 TCP/UDP 스택을 통해 통신하는 여러 서비스로 구성한 경우 포드의 컨테이너에서 동일한 네트워크 스택을 사용하므로 이 접근 방식은 여전히 작동합니다.
+
+다음 다이어그램에서는 모든 포드가 공유 네트워크에 연결되는 방법을 보여줍니다.
+
+
+image::2-5.png[2-5]
+
+
+== Kubernetes 네트워킹
+Kubernetes의 네트워킹은 컨테이너 간에 확장 가능한 통신 수단을 제공합니다.
+
+Kubernetes 네트워킹은 다음과 같은 기능을 제공합니다.
+
+* 고도로 결합된 컨테이너 간 통신
+
+* 포드 간 통신
+
+* 포드와 서비스 간 통신
+
+* 서비스와 외부 간 통신: 
+
+== 포드 및 서비스의 IP 주소
+대부분의 실제 애플리케이션은 단일 포드로 실행되지 않습니다. 애플리케이션은 수평으로 확장되어야 하므로, 늘어나는 사용자 수요를 충족하기 위해 많은 포드에서 같은 포드 리소스 정의의 동일한 컨테이너를 실행합니다. 서비스는 단일 IP/포트 결합을 정의하며, 포드 풀에 단일 IP 주소를 제공하고 멤버 포드 간에 부하 분산 클라이언트 요청을 제공합니다.
+
+기본적으로 서비스는 클라이언트를 라운드 로빈 방식으로 포드에 연결하며, 각 서비스에는 클라이언트가 연결할 고유한 IP 주소가 할당됩니다. 이 IP 주소는 내부 OpenShift 가상 네트워크에서 제공됩니다. 이 네트워크는 포드의 내부 네트워크와는 다르지만 포드에만 표시됩니다. 선택기와 일치하는 각 포드는 엔드포인트로 서비스 리소스에 추가됩니다.
+
+Kubernetes 포드 내 컨테이너는 서로의 동적 IP 주소에 직접 연결되지 않아야 합니다. 서비스는 SDN에서 포드로 더 안정적인 IP 주소를 연결하여 이 문제를 해결합니다. 포드가 다른 노드로 다시 시작, 복제 또는 재조정되면 서비스가 업데이트되어 확장성과 내결함성을 제공합니다.
+
+=== 서비스 유형
+애플리케이션 요구 사항, 클러스터 인프라 및 보안 요구 사항에 따라 여러 서비스 유형 중에서 선택할 수 있습니다.
+
+* *ClusterIP* +
+서비스 유형을 명시적으로 지정하지 않는 한 이 유형이 기본값입니다. ClusterIP 유형은 클러스터 내부 IP 주소에서 서비스를 노출합니다. 이 값을 선택하면 클러스터 내에서만 서비스에 연결할 수 있습니다.
+
+ClusterIP 서비스 유형은 RHOCP 클러스터 내에서 포드 간 라우팅에 사용되며, 포드가 서로 통신하고 액세스할 수 있도록 합니다. ClusterIP 서비스의 IP 주소는 클러스터 내부에서만 액세스할 수 있는 전용 서비스 네트워크에서 할당됩니다. 대부분의 애플리케이션은 Kubernetes에서 관리를 자동화하는 이 서비스 유형을 사용해야 합니다.
+
+* *로드 밸런서* +
+이 리소스는 RHOCP가 클라우드 환경에서 로드 밸런서를 활성화하도록 지시합니다. 로드 밸런서는 Kubernetes가 로드 밸런서를 프로비저닝하기 위해 클러스터가 실행 중인 클라우드 프로바이더와 상호 작용하도록 지시합니다. 그런 다음 로드 밸런서는 외부에서 액세스할 수 있는 IP 주소를 애플리케이션에 제공합니다.
+
+이 서비스 유형을 배포하기 전에 필요한 모든 예방 조치를 취합니다. 로드 밸런서는 일반적으로 클러스터의 각 애플리케이션에 할당하기에는 비용이 너무 많이 듭니다. 또한 이 서비스 유형을 사용하는 애플리케이션은 클러스터 외부의 네트워크에서 액세스할 수 있습니다. 의도하지 않은 액세스를 방지하려면 추가 보안 구성이 필요합니다.
+
+* *NodePort* +
+이 메서드를 사용하면 Kubernetes 가 노드 IP 주소의 포트에서 서비스를 노출합니다. 포트는 모든 클러스터 노드에 노출되며, 각 노드는 트래픽을 서비스의 엔드포인트(포드)로 리디렉션합니다.
+
+NodePort 서비스를 사용하려면 클러스터 노드에 대한 직접 네트워크 연결을 허용해야 하는데, 이는 보안 위험에 해당합니다.
+
+* *ExternalName* +
+이 서비스는 externalName 필드의 DNS 이름이 서비스를 지원하는 리소스의 위치임을 Kubernetes에 알립니다. Kubernetes DNS 서버에 대해 DNS를 요청하면 CNAME(Canonical Name) 레코드에서 externalName 을 반환하고, 클라이언트에 반환된 이름을 조회하여 IP 주소를 가져오도록 지시합니다.
+
+
+
+
+== Service
+
+서비스 오브젝트를 사용하여 RHOCP에서 내부 포드 간 네트워크 통신을 구성할 수 있습니다. 애플리케이션은 서비스 이름과 포트로 요청을 보냅니다. RHOCP는 레이블을 사용하여 서비스의 대상 포드로 이러한 요청을 다시 라우팅하는 가상 네트워크를 제공합니다.
+
+
+
+
+NOTE: 이 섹션의 실습은 이전 섹션의 deploymets 생성을 따릅니다.
+
+올바른 네임스페이스를 지정합니다.:
+
+[#create-namespace]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project myspace-%userid% 
+----
+
+
+Deployments가 있는지 확인하세요.:
+
+[#have-deployment-service]
+[.console-input]
+[source,bash]
+----
+oc get deployments
+----
+
+[.console-output]
+[source,bash]
+----
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+quarkus-demo-deployment   3/3     3            3           8m33s
+----
+
+Replicasets가 있는지 확인하세요:
+
+[#have-rs-service]
+[.console-input]
+[source,bash]
+----
+oc get rs
+----
+
+[.console-output]
+[source,bash]
+----
+NAME                                 DESIRED   CURRENT   READY   AGE
+quarkus-demo-deployment-5979886fb7   3         3         3       8m56s
+----
+
+Pod가 있는지 확인하세요.:
+
+[#have-pods-service]
+[.console-input]
+[source,bash]
+----
+oc get pods
+----
+
+[.console-output]
+[source,bash]
+----
+NAME                                       READY   STATUS    RESTARTS   AGE
+quarkus-demo-deployment-5979886fb7-c888m   1/1     Running   0          9m17s
+quarkus-demo-deployment-5979886fb7-gdtnz   1/1     Running   0          9m17s
+quarkus-demo-deployment-5979886fb7-grf59   1/1     Running   0          9m17s
+----
+
+서비스를 생성합니다.:
+[#create-service]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: the-service
+spec:
+  selector:
+    app: quarkus-demo
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
+EOF
+----
+
+:section-k8s: services
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+watch oc get services
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+NAME          TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+the-service   LoadBalancer   172.30.103.41   <pending>     80:31974/TCP     4s
+----
+
+외부 IP가 할당될 때까지 기다리세요.
+
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+NAME    TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)          AGE
+myapp   LoadBalancer   172.30.103.41   34.71.122.153   8080:31974/TCP   44s
+----
+
+NOTE: `watch` 명령어를 종료하려면, [ctrl+c]를 입력합니다.
+
+
+OpenShift와 같은 호스팅된 Kubernetes 클러스터를 사용하는 경우 `8080` 포트와 함께 `curl` 및 EXTERNAL-IP 주소를 사용하거나 `kubectl(oc)` 을 사용하여 가져옵니다.:
+
+IMPORTANT: AWS에 있는 경우 `ip` 대신 `hostname` 을 가져와야 합니다. 아래 명령어는 hostname을 가져옵니다.
+
+
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+IP=$(kubectl get service the-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+----
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+PORT=$(kubectl get service the-service -o jsonpath="{.spec.ports[*].port}")
+----
+
+
+
+Curl the Service:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+curl $IP:$PORT
+----
+
+
+
+결과값:
+
+[.console-output]
+[source,bash]
+----
+Supersonic Subatomic Java with Quarkus quarkus-demo-deployment-5979886fb7-grf59:1
+----
+
+
+
+
+== 외부 연결을 위한 인그레스 오브젝트 사용
+인그레스는 Route(RHOCP 리소스)와 동일한 기능을 몇 가지 제공하는 Kubernetes 리소스입니다. 인그레스 오브젝트는 외부 요청을 수락하고 경로를 기반으로 요청을 전송합니다. HTTP, HTTPS, SNI(서버 이름 확인)및 TLS(SNI 사용) 트래픽 유형만 허용할 수 있습니다. 표준 Kubernetes 인그레스 리소스는 일반적으로 최소입니다. TLS 종료, 경로 리디렉션, 고정 세션 등 애플리케이션이 사용하는 많은 일반 기능은 인그레스 컨트롤러에 따라 다릅니다. Kubernetes는 구성 구문을 정의하지 않습니다. RHOCP에서는 인그레스 오브젝트에서 지정하는 조건을 충족하기 위해 경로를 생성합니다.
+
+
+=== Ingress
+
+[#create-ingress]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example
+  namespace: myspace-%userid%
+spec:
+  rules:
+    - host: stuff-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: the-service
+                port:
+                  number: 80
+EOF
+----
+
+Ingress에 설정된 host name을 통해 curl 요청을 합니다.
+
+[#curl-services-ingress]
+[.console-input]
+[source, bash]
+----
+curl stuff-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com
+----
+
+
+
+[.console-output]
+[source,bash]
+----
+Supersonic Subatomic Java with Quarkus quarkus-demo-deployment-5979886fb7-gdtnz:2
+----
+
+NOTE: 이전 방식 (서비스의 Cluster IP및 PORT)과는 다르게 Ingress의 Host(외부노출)를 통해 curl이 요청이 정상적으로 수행됨을 확인할 수 있습니다.
+
+
+== 외부 연결을 위한 경로(Route) 사용
+RHOCP는 클러스터 외부의 외부 네트워크에 애플리케이션을 노출하기 위한 리소스를 제공합니다. HTTP 및 HTTPS 트래픽, TCP 애플리케이션 및 비 TCP 트래픽을 노출할 수 있습니다. 그러나 HTTP 및 TLS 기반 애플리케이션만 외부 액세스에 노출해야 합니다. 데이터베이스와 같은 다른 프로토콜을 사용하는 애플리케이션은 일반적으로 클러스터 외부에서 외부 액세스에 노출되지 않습니다. route 및 인그레스는 인그레스 트래픽을 처리하는 데 필요한 주요 리소스입니다.
+
+RHOCP는 외부 네트워크에 애플리케이션을 노출하기 위한 route 리소스를 제공합니다. 경로(Route)를 사용하면 공개적으로 액세스할 수 있는 고유한 호스트 이름을 사용하여 애플리케이션에 액세스할 수 있습니다. 경로(Route)는 Kubernetes 인그레스 컨트롤러를 사용하여 공용 IP 주소에서 포드로 트래픽을 리디렉션합니다. Kubernetes는 1.24 릴리스부터 기본적으로 인그레스 컨트롤러를 제공합니다. RHOCP 클러스터의 경우 OpenShift 인그레스 연산자는 인그레스 컨트롤러를 제공합니다. RHOCP 클러스터는 OpenShift 인그레스 컨트롤러와 병렬로 배포할 수 있는 다양한 타사 인그레스 컨트롤러를 사용할 수 있습니다.
+
+경로(Route)는 인그레스 트래픽을 클러스터의 서비스에 제공합니다. 경로(Route)는 Kubernetes 인그레스 오브젝트보다 먼저 생성되었으며 더 많은 기능을 제공합니다. 경로(Route)는 TLS 재암호화, TLS 패스스루, 파랑-녹색 배포를 위한 트래픽 분할 등 표준 인터페이스를 통해 Kubernetes 인그레스 컨트롤러에서는 지원되지 않을 수도 있는 고급 기능을 제공합니다.
+
+
+=== OpenShift Route
+
+이름 충돌을 방지하려면 수동으로 생성된 Ingress를 삭제하세요.  OpenShift Route는 기본 Ingress의 ha-proxy를 활용합니다.
+
+[#delete-ingress]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete ingress example
+----
+
+[#expose-service]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc expose service the-service
+----
+
+NOTE: `oc expose` 명령어는 service를 routes를 통해 외부로 노출시킵니다.
+
+
+[#expose-service]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get routes
+----
+
+
+[.console-output]
+[source,bash]
+----
+NAME          HOST/PORT                                     PATH   SERVICES      PORT   TERMINATION   WILDCARD
+the-service   the-service-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com          the-service   8080                 None
+----
+
+그런 다음 서비스에 요청하십시오.:
+
+[#curl-services-route]
+[.console-input]
+[source, bash]
+----
+curl the-service-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com
+----
+
+
+
+
+[.console-output]
+[source,bash]
+----
+Supersonic Subatomic Java with Quarkus quarkus-demo-deployment-5979886fb7-gdtnz:3
+----
+
+
+지금까지 service를 통한 클러스터 내부에서의 pod 노출과 Route/Ingress를 통한 외부로의 Service 노출을 확인하였습니다.

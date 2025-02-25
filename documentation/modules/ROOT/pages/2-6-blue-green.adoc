@@ -1,0 +1,300 @@
+= Blue/Green
+
+https://martinfowler.com/bliki/BlueGreenDeployment.html[Here] Blue/Green 배포에 대한 설명과 이력을 확인할 수 있습니다.
+
+올바른 네임스페이스에 있는지 확인하세요.
+
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc new-project bg-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+namespace/bg-%userid% created
+----
+
+NOTE: `oc new-project bg-%userid%` : bg-%userid%라는 새 프로젝트(네임스페이스)를 생성합니다.
+
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project bg-%userid%
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "bg-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project bg-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 bg-%userid%로 변경합니다.
+
+
+
+다른 것이 배포되지 않았는지 확인하세요.:
+
+[#no-resources-blue-green]
+[.console-input]
+[source, bash]
+----
+oc get all
+----
+
+[.console-output]
+[source,bash]
+----
+No resources found in bg-%userid% namespace.
+----
+
+
+`myboot` V1 배포:
+
+[#deploy-v1-blue-green]
+[.console-input]
+[source, bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myboot
+  name: myboot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myboot
+  template:
+    metadata:
+      labels:
+        app: myboot
+    spec:
+      containers:
+      - name: myboot
+        image: quay.io/rhdevelopers/myboot:v1
+        ports:
+          - containerPort: 8080
+        resources:
+          requests: 
+            memory: "300Mi" 
+            cpu: "250m" # 1/4 core
+          limits:
+            memory: "900Mi"
+            cpu: "1000m" # 1 core
+EOF
+----
+
+Scale to 2 replicas:
+
+[#scale-v1-blue-green]
+[.console-input]
+[source, bash]
+----
+oc scale deployment/myboot --replicas=2
+----
+
+실시간으로 pod 확인 ( `show-labels`옵션 사용):
+
+[#labels-v1-blue-green]
+[.console-input]
+[source, bash]
+----
+watch oc get pods --show-labels
+----
+
+서비스 배포:
+
+[#deploy-service-blue-green]
+[.console-input]
+[source, bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: myboot
+  labels:
+    app: myboot    
+spec:
+  ports:
+  - name: http
+    port: 8080
+  selector:
+    app: myboot
+  type: LoadBalancer
+EOF
+----
+
+
+
+
+
+OpenShift와 같은 호스팅된 Kubernetes 클러스터를 사용하는 경우 `8080` 포트와 함께 `curl` 및 EXTERNAL-IP 주소를 사용하거나 `kubectl(oc)` 을 사용하여 가져옵니다.:
+
+IMPORTANT: AWS에 있는 경우 `ip` 대신 `hostname` 을 가져와야 합니다. 아래 명령어는 hostname을 가져옵니다.
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+----
+
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+PORT=$(kubectl get service myboot -o jsonpath="{.spec.ports[*].port}")
+----
+
+
+Poll the endpoint:
+
+[#poll-endpoint]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+while true
+do curl $IP:$PORT
+sleep 0.8
+done
+----
+
+[.console-output]
+[source,bash]
+----
+Aloha from Spring Boot! 2 on myboot-76b66dc545-s6j7c
+Aloha from Spring Boot! 1 on myboot-76b66dc545-nqx59
+Aloha from Spring Boot! 2 on myboot-76b66dc545-nqx59
+----
+
+
+`myboot` V2 배포:
+
+[#deploy-v2-blue-green]
+[.console-input]
+[source, bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myboot-next
+  name: myboot-next
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myboot-next
+  template:
+    metadata:
+      labels:
+        app: myboot-next
+    spec:
+      containers:
+      - name: myboot
+        image: quay.io/rhdevelopers/myboot:v2
+        ports:
+          - containerPort: 8080
+        resources:
+          requests: 
+            memory: "300Mi" 
+            cpu: "250m" # 1/4 core
+          limits:
+            memory: "900Mi"
+            cpu: "1000m" # 1 core
+EOF
+----
+
+새 Pod/배포에 새 코드가 포함되어 있는지 확인하세요.
+
+[#exec-v2-blue-green]
+[.console-input]
+[source, bash]
+----
+PODNAME=$(kubectl get pod -l app=myboot-next -o name)
+----
+
+[#exec-v2-blue-green]
+[.console-input]
+[source, bash]
+----
+oc exec -it $PODNAME -- curl localhost:8080
+----
+
+
+[.console-output]
+[source,bash]
+----
+Bonjour from Spring Boot! 1 on myboot-next-66b68c6659-ftcjr
+----
+
+이제 새 포드(myboot-next)를 가리키도록 서비스를 업데이트하고 Green으로 전환하세요.:
+
+[#patch-service-green]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc patch svc/myboot -p '{"spec":{"selector":{"app":"myboot-next"}}}'
+----
+
+[.console-output]
+[source,bash]
+----
+Aloha from Spring Boot! 240 on myboot-d78fb6d58-929wn
+Bonjour from Spring Boot! 2 on myboot-next-66b68c6659-ftcjr
+Bonjour from Spring Boot! 3 on myboot-next-66b68c6659-ftcjr
+Bonjour from Spring Boot! 4 on myboot-next-66b68c6659-ftcjr
+----
+
+
+다시 이전 서비스로 돌아가고 싶다면,
+이전 포드(myboot)를 가리키도록 서비스를 업데이트하고 Blue로 전환합니다.:
+
+[#patch-service-blue]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc patch svc/myboot -p '{"spec":{"selector":{"app":"myboot"}}}'
+----
+
+[.console-output]
+[source,bash]
+----
+Bonjour from Spring Boot! 17 on myboot-next-66b68c6659-ftcjr
+Aloha from Spring Boot! 257 on myboot-d78fb6d58-vqvlb
+Aloha from Spring Boot! 258 on myboot-d78fb6d58-vqvlb
+----
+
+== Clean Up
+
+[#clean]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete service myboot
+----
+
+
+[#clean]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete deployment myboot
+----
+
+
+[#clean]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete deployment myboot-next
+----
