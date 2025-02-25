@@ -1,4 +1,4 @@
-== Workshop Environment
+= Lab 환경
 
 === 사용자 이름을 확인하세요!
 

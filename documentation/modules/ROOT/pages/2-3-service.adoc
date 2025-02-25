@@ -227,7 +227,7 @@ metadata:
   namespace: myspace-%userid%
 spec:
   rules:
-    - host: stuff-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com
+    - host: stuff-myspace-%userid%.%subdomain%
       http:
         paths:
           - path: /
@@ -246,7 +246,7 @@ Ingress에 설정된 host name을 통해 curl 요청을 합니다.
 [.console-input]
 [source, bash]
 ----
-curl stuff-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com
+curl stuff-myspace-%userid%.%subdomain%
 ----
 
 
@@ -270,7 +270,7 @@ RHOCP는 외부 네트워크에 애플리케이션을 노출하기 위한 route 
 
 === OpenShift Route
 
-이름 충돌을 방지하려면 수동으로 생성된 Ingress를 삭제하세요.  OpenShift Route는 기본 Ingress의 ha-proxy를 활용합니다.
+이름 충돌을 방지하려면 수동으로 생성된 Ingress를 삭제하세요. OpenShift Route는 기본 Ingress의 ha-proxy를 활용합니다.
 
 [#delete-ingress]
 [.console-input]
@@ -301,7 +301,7 @@ oc get routes
 [source,bash]
 ----
 NAME          HOST/PORT                                     PATH   SERVICES      PORT   TERMINATION   WILDCARD
-the-service   the-service-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com          the-service   8080                 None
+the-service   the-service-myspace-%userid%.%subdomain%          the-service   8080                 None
 ----
 
 그런 다음 서비스에 요청하십시오.:
@@ -310,7 +310,7 @@ the-service   the-service-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.o
 [.console-input]
 [source, bash]
 ----
-curl the-service-myspace-%userid%.apps.cluster-vgrd5.vgrd5.sandbox557.opentlc.com
+curl the-service-myspace-%userid%.%subdomain%
 ----
 
 
