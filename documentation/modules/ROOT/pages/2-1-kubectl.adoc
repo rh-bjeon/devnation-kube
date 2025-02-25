@@ -2,9 +2,12 @@
 
 
 == Kubernetes 및 OpenShift 명령줄 인터페이스
-웹 콘솔에서 또는 kubectl 이나 oc CLI(명령줄 인터페이스)를 사용하여 OpenShift 클러스터를 관리할 수 있습니다. kubectl 명령은 Kubernetes에 기본 제공되며 Kubernetes API에 대한 Thin Wrapper입니다. OpenShift oc 명령은 kubectl 명령의 상위 집합이며 OpenShift 관련 기능에 대한 명령을 추가합니다. 
+웹 콘솔에서 kubectl 또는 oc CLI(명령줄 인터페이스)를 사용하여 OpenShift 클러스터를 관리할 수 있습니다. 
+kubectl 커맨드는 Kubernetes에 기본 제공되는, Kubernetes API에 대한 Thin Wrapper입니다. 
+OpenShift oc 커맨드는 kubectl 커맨드의 상위 집합으로, kubectl 커맨드뿐만 아니라 추가적으로 OpenShift 기능에 대한 커맨드를 사용할 수 있습니다.
 
-oc 명령을 사용하면 터미널에서 애플리케이션을 생성하고 Red Hat OpenShift Container Platform(RHOCP) 프로젝트를 관리할 수 있습니다. OpenShift CLI는 다음과 같은 상황에 적합합니다.
+oc 커맨드를 사용하면 터미널에서 애플리케이션을 생성하고 Red Hat OpenShift Container Platform(RHOCP) 프로젝트를 관리할 수 있습니다. 
+OpenShift CLI는 다음과 같은 상황에 적합합니다.
 
 * 프로젝트 소스 코드를 사용하여 직접 작업
 
