@@ -143,37 +143,12 @@ EOF
 ----
 
 :section-k8s: services
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-watch oc get services
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME          TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-the-service   LoadBalancer   172.30.103.41   <pending>     80:32046/TCP     4s
-----
-
-외부 IP가 할당될 때까지 기다리세요.
-현재 환경은 AWS상에 배포되어 있으므로, 아래와 같이 IP 대신 hostname이 표시됩니다.
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME    TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)          AGE
-the-service   LoadBalancer   172.30.103.41   abc.us-east-2.elb.amazonaws.com   80:32046/TCP   44s
-----
-
-NOTE: `watch` 명령어를 종료하려면, [ctrl+c]를 입력합니다.
-
-`hostname` 이 표시되면, 아래 명령어를 통해 hostname을 가져옵니다.
+아래 명령어를 통해 서비스의 클러스터 IP와 PORT를 가져옵니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(oc get service the-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service the-service -o jsonpath="{.spec.clusterIP}")
 ----
 
 
@@ -184,7 +159,6 @@ PORT=$(oc get service the-service -o jsonpath="{.spec.ports[*].port}")
 ----
 
 
-
 Curl the Service:
 
 [.console-input]
@@ -192,7 +166,6 @@ Curl the Service:
 ----
 curl $IP:$PORT
 ----
-
 
 
 결과값:
