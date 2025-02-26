@@ -184,7 +184,6 @@ spec:
     port: 8000
   selector:
     inservice: mypods
-  type: LoadBalancer
 EOF
 ----
 
@@ -227,15 +226,12 @@ jq: error (at <stdin>:18): Cannot iterate over null (null)
 NOTE: 현재 Service가 선택할 수 있는 Pod가 없기 때문에 IP 조회가 실패합니다.
 
 
-OpenShift와 같은 호스팅된 Kubernetes 클러스터를 사용하는 경우 `8080` 포트와 함께 `curl` 및 EXTERNAL-IP 주소를 사용하거나 `kubectl(oc)` 을 사용하여 가져옵니다.:
-
-IMPORTANT: AWS에 있는 경우 `ip` 대신 `hostname` 을 가져와야 합니다. 아래 명령어는 hostname을 가져옵니다.
-
+Service의 Cluster IP를 가져옵니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(oc get service my-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service my-service -o jsonpath="{.spec.clusterIP}")
 ----
 
 
@@ -268,8 +264,9 @@ curl: (7) Failed to connect to 35.224.233.213 port 8000: Connection refused
 
 NOTE: 현재 Service가 참조하는 label을 가진 Pod가 없기 때문에 curl은 실패합니다.
 
-* *Terminal#3에서 작업*
+그럼 이제 Service가 Pod들을 바라볼 수 있도록 Pod에 label을 달아주도록 하겠습니다.
 
+* *Terminal#3에서 작업*
 
 [#kubectl-deploy-app]
 [.console-input]
@@ -286,6 +283,7 @@ Now using project "funstuff-%userid%" on server "https://172.30.0.1:443".
 
 NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 funstuff-%userid%로 변경합니다.
 
+아래 명령어를 통해 현재 Service가 참조하고 있는 label(inservice=mypods)을 Python Pod(app=mypython)에 설정합니다.
 
 [#label-mypython]
 [.console-input]
@@ -293,8 +291,6 @@ NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기�
 ----
 oc label pod -l app=mypython inservice=mypods
 ----
-
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을  Pod(app=mypython)에 설정합니다.
 
 
 * *Terminal#1에서 확인*
@@ -320,21 +316,11 @@ Python Hello on mypython-deployment-6874f84d85-2kpjl
 Python Hello on mypython-deployment-6874f84d85-2kpjl
 ----
 
+NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 Python Pod(app=mypython)에서 응답하기 시작합니다.
+NOTE: 응답까지 조금 시간이 걸릴 수 있습니다. 
 
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 Pod(app=mypython)에서 응답합니다.
 
-NOTE: 응답까지 조금 시간이 걸릴 수 있습니다. 응답이 계속 지연되는 경우에는 아래 명령어를 대신 쓰셔도 됩니다. 
-
-[#poll-endpoint]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-while true
-do curl my-service.funstuff-user1.svc.cluster.local:$PORT
-sleep 0.8
-done
-----
-
+이어서 다른 Pod에도 label을 추가해봅니다.
 
 * *Terminal#3에서 작업*
 
@@ -345,7 +331,7 @@ done
 oc label pod -l app=mynode inservice=mypods
 ----
 
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 Pod(app=mynode)에 설정합니다.
+NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 Nodejs Pod(app=mynode)에도 설정합니다.
 
 * *Terminal#1에서 확인*
 
@@ -373,7 +359,8 @@ Python Hello on mypython-deployment-6874f84d85-2kpjl
 Python Hello on mypython-deployment-6874f84d85-2kpjl
 ----
 
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 또다른 Pod(app=mynode)에서도 응답합니다.
+NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가지게 된 Nodejs Pod(app=mynode)에서도 응답하기 시작합합니다.
+
 
 
 * *Terminal#3에서 작업*
@@ -385,7 +372,7 @@ NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 또다른
 oc label pod -l app=mygo inservice=mypods
 ----
 
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을  Pod(app=mygo)에 설정합니다.
+NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 Golang Pod(app=mygo)에 설정합니다.
 
 
 * *Terminal#1에서 확인*
@@ -412,8 +399,9 @@ Python Hello on mypython-deployment-6874f84d85-2kpjl
 Python Hello on mypython-deployment-6874f84d85-2kpjl
 ----
 
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 Pod(app=mygo)에서도 응답합니다.
+NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가지게 된 Golang Pod(app=mygo)에서도 응답합니다.
 
+각각 다른 언어로 작성된 애플리케이션 파드들이 동일한 endpoint(Service IP)를 통해 같이 응답하고 있음을 확인할 수 있습니다.
 
 * *Terminal#3에서 확인*
 
@@ -432,10 +420,10 @@ oc get endpoints my-service -o json | jq '.subsets[].addresses[].ip'
 "10.130.2.45"
 ----
 
-NOTE: Service가 트래픽을 전달할 수 있는 pod 3개의 IP가 모두 확인됩니다.
+NOTE: 위 명령어를 통해 Service가 트래픽을 전달하고 있는 pod 3개의 IP가 모두 확인됩니다.
 
 
-포드 IP를 확인하세요.:
+파드들의 IP를 다시 확인하세요.
 
 [#pod-ips]
 [.console-input]
@@ -445,9 +433,7 @@ oc get pods -o wide
 ----
 
 
-
-
-서비스에서 `mypython` 포드를 제거합니다.
+Service에 연결된 Pod 중 `mypython` Pod를 제거합니다.
 
 [#remove-label]
 [.console-input]
@@ -474,6 +460,9 @@ NOTE: Label이 제거된 Pod의 IP를 제외한 pods IP만 조회됩니다.
 
 
 == Clean Up
+
+실습을 완료하였으면 프로젝트를 삭제합니다. 
+(프로젝트를 통째로 삭제하는 경우 약간 시간이 걸릴 수 있습니다.)
 
 [#clean-up]
 [.console-input]

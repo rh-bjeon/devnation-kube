@@ -99,7 +99,7 @@ Pod의 개수를 2개로 늘립니다.
 oc scale deployment/myboot --replicas=2
 ----
 
-실시간으로 pod 확인 ( `show-labels`옵션 사용):
+실시간으로 pod 상태 확인 ( `show-labels` 옵션을 함께 사용):
 
 [#labels-v1-blue-green]
 [.console-input]
@@ -107,6 +107,7 @@ oc scale deployment/myboot --replicas=2
 ----
 watch oc get pods --show-labels
 ----
+
 
 서비스 배포:
 
@@ -120,30 +121,23 @@ kind: Service
 metadata:
   name: myboot
   labels:
-    app: myboot    
+    app: myboot
 spec:
   ports:
   - name: http
     port: 8080
   selector:
     app: myboot
-  type: LoadBalancer
 EOF
 ----
 
 
-
-
-
-OpenShift와 같은 호스팅된 Kubernetes 클러스터를 사용하는 경우 `8080` 포트와 함께 `curl` 및 EXTERNAL-IP 주소를 사용하거나 `kubectl(oc)` 을 사용하여 가져옵니다.:
-
-IMPORTANT: AWS에 있는 경우 `ip` 대신 `hostname` 을 가져와야 합니다. 아래 명령어는 hostname을 가져옵니다.
-
+Service의 Cluster IP를 가져옵니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(oc get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service myboot -o jsonpath="{.spec.clusterIP}")
 ----
 
 
