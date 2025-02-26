@@ -451,7 +451,7 @@ EOF
 NOTE: `spec` > `containers` > `envFom` 에 configmap이 포함된 것을 확인할 수 있습니다.
 
 
-그리고 환경변수수 Endpoint를 가져옵니다.
+그리고 환경변수 Endpoint를 가져옵니다.
 
 [#get-config4-configmaps]
 [.console-input]
