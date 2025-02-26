@@ -1,10 +1,10 @@
 [tabs]
 ====
-Terminal 1::
+Terminal#1::
 +
 --
 // tag::term-exec[]
-Exit the `exec` command
+`exec` 명령을 종료합니다
 
 [.console-input]
 [source,bash]
@@ -13,17 +13,17 @@ exit
 ----
 // end::term-exec[]
 
-Now delete the pod
+이제 Pod를 삭제합니다.
 
 [.console-input]
 [source,bash]
 ----
-kubectl delete pod myboot-demo
+oc delete pod myboot-demo
 ----
 
 --
 // tag::term2[]
-Terminal 2::
+Terminal#2::
 +
 --
 
@@ -33,15 +33,15 @@ Terminal 2::
 exit
 ----
 
-This should close out the terminal
+다음을 입력하여 터미널 창을 닫습니다.
 --
 // end::term2[]
 // tag::term3[]
-Terminal 3::
+Terminal#3::
 +
 --
 
-Close out the terminal window by typing the following in it
+터미널 창에 다음을 입력하여 터미널 창을 닫습니다.
 
 [.console-input]
 [source,bash]
@@ -52,10 +52,10 @@ exit
 --
 // end::term3[]
 // tag::term3-ssh[]
-Terminal 3::
+Terminal#3::
 +
 --
-Hit kbd:[CTRL+c] to exit out of the `watch`
+kbd:[CTRL+c] 를 입력하여 `watch` 명령을 종료합니다.
 
 And then in the `ssh` shell type
 
