@@ -15,7 +15,7 @@ Kubernetes에서는 컨테이너의 리소스를 **"요청(Requests)"**과 **"�
 ** 이 제한을 초과하면 컨테이너가 강제 종료(OOM Kill)될 수도 있습니다.
 
 
-새로운 네임스페이스를 생성 후, 올바른 네임스페이스에 있는지 확인하세요.
+새로운 프로젝트를 생성 후, 올바른 프로젝트에 있는지 확인하세요.
 
 [#kubectl-deploy-app]
 [.console-input]
@@ -45,11 +45,11 @@ oc project resource-%userid%
 Now using project "resource-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 resource-%userid%로 변경합니다.
 
 
 
-네임스페이스에서 아무것도 실행되고 있지 않은지 확인하세요.
+프로젝트에서 아무것도 실행되고 있지 않은지 확인하세요.
 
 [#no-resources-resource]
 [.console-input]
@@ -538,7 +538,7 @@ oc project resource-%userid%
 Now using project "resource-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 resource-%userid%로 변경합니다.
 
 
 [.console-input]

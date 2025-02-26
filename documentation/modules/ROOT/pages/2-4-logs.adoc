@@ -37,7 +37,7 @@ oc project log-%userid%
 Now using project "log-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 log-%userid%로 변경합니다.
+NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 log-%userid%로 변경합니다.
 
 
 [#create-deployment]
@@ -170,7 +170,7 @@ oc project log-%userid%
 Now using project "log-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 log-%userid%로 변경합니다.
+NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 log-%userid%로 변경합니다.
 
 
 [.console-input]
@@ -216,7 +216,7 @@ oc project log-%userid%
 Now using project "log-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 log-%userid%로 변경합니다.
+NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 log-%userid%로 변경합니다.
 
 
 [#create-service]

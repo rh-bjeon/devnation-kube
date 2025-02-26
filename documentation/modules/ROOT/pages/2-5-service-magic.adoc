@@ -4,7 +4,7 @@ Kubernetes에서는 레이블(Labels)을 이용해 특정 파드에 트래픽을
 
 Service와 Pod는 반드시 1:1로 매칭되는 것은 아니며, 특정 레이블을 가진 파드가 여러 개 있다면 그 모든 파드로 트래픽 분배할 수도 있습니다.
 
-네임스페이스 생성:
+프로젝트 생성:
 
 * *Terminal#1에서 작업*
 
@@ -36,7 +36,7 @@ oc project funstuff-%userid%
 Now using project "funstuff-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 funstuff-%userid%로 변경합니다.
+NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 funstuff-%userid%로 변경합니다.
 
 
 
@@ -145,7 +145,7 @@ oc project funstuff-%userid%
 Now using project "funstuff-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 funstuff-%userid%로 변경합니다.
+NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 funstuff-%userid%로 변경합니다.
 
 
 [#labels-service-magic]
@@ -285,7 +285,7 @@ oc project funstuff-%userid%
 Now using project "funstuff-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 funstuff-%userid%로 변경합니다.
+NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 funstuff-%userid%로 변경합니다.
 
 아래 명령어를 통해 현재 Service가 참조하고 있는 label(inservice=mypods)을 Python Pod(app=mypython)에 설정합니다.
 

@@ -12,7 +12,7 @@ Kubernetes의 롤링 업데이트 기능을 사용하면 무중단 배포가 가
 
 IMPORTANT: 이 실습은 직전의 `Resources and Limits` 실습 환경을 이어서 사용합니다.
 
-올바른 네임스페이스에 있는지 확인하세요.
+올바른 프로젝트에 있는지 확인하세요.
 
 [#kubectl-deploy-app]
 [.console-input]
@@ -27,7 +27,7 @@ oc project resource-%userid%
 Now using project "resource-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 resource-%userid%로 변경합니다.
 
 
 
@@ -78,7 +78,7 @@ oc project resource-%userid%
 Now using project "resource-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 resource-%userid%로 변경합니다.
 
 
 
@@ -110,7 +110,7 @@ oc project resource-%userid%
 Now using project "resource-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 resource-%userid%로 변경합니다.
 
 
 [.console-input]
@@ -163,7 +163,7 @@ oc project resource-%userid%
 Now using project "resource-%userid%" on server "https://172.30.0.1:443".
 ----
 
-NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
+NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 resource-%userid%로 변경합니다.
 
 deployment의 정보를 확인합니다.
 
