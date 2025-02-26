@@ -567,7 +567,7 @@ include::partial$terminal-cleanup.adoc[tags=**;!*;term3;term-exec]
 == HostPath
 
 IMPORTANT: *`HostPath` 부분은 실습을 하지 마시고 검토만 하세요* +
-이 실습의 user 계정은 admin 권한이 없기 때문에, 내용을 읽어보시고 실습은 다음 파트인 Persistent Volume & Persistent Volume Claim에서 계속합니다.
+이 실습의 user 계정은 admin 권한이 없기 때문에, 내용을 읽어보시고 실습은 다음 파트인 Static vs Dynamic Provisioning 에서 계속합니다.
 
 *hostPath 볼륨 사용 제한* +
 OpenShift는 클러스터 노드의 파일 시스템 경로를 컨테이너에 직접 마운트하는 hostPath 볼륨의 사용을 기본적으로 금지합니다. 이는 보안상 중요한 이유 때문입니다.
@@ -784,7 +784,7 @@ include::partial$terminal-cleanup.adoc[tags=**;!*;term-exec]
 
 
 
-== Persistent Volume & Persistent Volume Claim
+== Static vs Dynamic Provisioning
 
 '영구 볼륨'(_PV_)은 관리자가 직접 개별로 생성하거나 Pod와 독립적으로 '스토리지 클래스'를 사용하여 동적으로 생성되는 Kubernetes 리소스입니다.
 이런 영구 볼륨은 NFS, Ceph, iSCSI 또는 클라우드 제공업체별 스토리지 시스템에 기반을 두고 있을 수 있습니다.
@@ -792,426 +792,27 @@ include::partial$terminal-cleanup.adoc[tags=**;!*;term-exec]
 '영구 볼륨 클레임'(_PertantVolumeClaim, PVC_)은 유저의 스토리지 요청입니다.
 특정 볼륨 크기 또는 액세스 모드 등을 설정하여 요청할 수 있습니다.
 
-
-=== Persistent volume/claim with hostPath
-
-`hostPath` 전략을 사용하되 이를 볼륨으로 직접 구성하지 않고 영구 볼륨(PV) 및 영구 볼륨 클레임(PVC)을 사용하겠습니다. 
-
-
-[source, yaml]
-----
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: my-persistent-volume
-  labels:
-    type: local
-spec:
-  storageClassName: pv-demo 
-  capacity:
-    storage: 100Mi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/mnt/persistent-volume"
-----
-
-위 내용을 확인해보면, 이제 '볼륨' 에 대한 정보는 _영구 볼륨_ 개체에 있으며, 더 이상 Pod에 작성할 필요가 없습니다. 
-
-아래 명령어를 통해 영구 볼륨(PV)을 생성합니다.
-
-[.console-input]
-[source,bash]
-----
-cat <<EOF | oc create -f -
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: my-persistent-volume-%userid%
-  labels:
-    type: local
-spec:
-  storageClassName: pv-demo 
-  capacity:
-    storage: 100Mi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/mnt/persistent-volume-%userid%"
-EOF
-----
-
-[.console-input]
-[source,bash]
-----
-oc get pv -w
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                                           STORAGECLASS   REASON   AGE
-my-persistent-volume-%userid%                       100Mi      RWO            Retain           Available                                                   pv-demo                 5s
-----
-
-:mount-dir: /mnt/persistent-volume
-
-볼륨이 설정되면 Terminal#3 을 업데이트하여 볼륨의 새 위치인 `{mount-dir}` 을 살펴보겠습니다.
-
-[tabs]
-====
-{file-watch-terminal}::
-+
---
-
-kbd:[CTRL+c]를 눌러 기존 watch 명령을 종료합니다.
-
-그리고 새로운 watch 명령을 실행합니다.
-
-include::partial$file-watch-command.adoc[]
---
-====
-
-* *Terminal#2에서 수행*
-
-
-
-[#kubectl-deploy-app]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc project volume-%userid%
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-Now using project "volume-%userid%" on server "https://172.30.0.1:443".
-----
-
-NOTE: `oc project volume-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 volume-%userid%로 변경합니다.
-
-
-우선 pod가 배포되어 있는 노드를 확인합니다.
-
-
-[.console-input]
-[source,bash]
-----
-oc get pod -o wide
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME          READY   STATUS    RESTARTS   AGE     IP            NODE                                       NOMINATED NODE   READINESS GATES
-myboot-demo   1/1     Running   0          4m19s   10.131.0.29   ip-10-0-27-23.us-east-2.compute.internal   <none>           <none>
-----
-
-노드로  접속합니다.
-
-[.console-input]
-[source,bash]
-----
-oc debug node/ip-10-0-27-23.us-east-2.compute.internal
-chroot /host
----
-
-NOTE: oc debug node 명령어는 node를 디버깅하기 위한 pod를 생성하고 노드에 접속합니다.
-
-
-이제 노드에 있으므로 Pod가 `/tmp/demo`로 마운트한 `{mount-dir}` 디렉터리를 살펴보겠습니다.
-
-[.console-input]
-[source,bash]
-----
-watch -n1 -- "ls -al /mnt/persistent-volume-%userid% && eval ""cat /mnt/persistent-volume-%userid%/greeting.txt"""
-----
-
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-drwxr-xr-x. 2 root root  6 Dec  7 09:32 .
-drwxr-xr-x. 3 root root 18 Dec  7 09:32 ..
-cat: /mnt/data/greeting.txt: No such file or directory
-----
-
-NOTE: 아직 파일이 확인되지 않습니다.
-
-
-그런 다음 개발 측에서는 _PV_에서 필요한 것을 요청해야 합니다.
-다음 예에서는 *10Mi* 공간을 요청합니다. 
-
-
-[source, yaml]
-.{quick-open-file}
-----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: myboot-volumeclaim-%userid%
-spec:
-  storageClassName: pv-demo 
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Mi
-----
-
-
-[.console-input]
-[source,bash]
-----
-cat <<EOF | oc create -f -
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: myboot-volumeclaim-%userid%
-spec:
-  storageClassName: pv-demo 
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Mi
-EOF
-----
-
-[.console-input]
-[source,bash]
-----
-oc get pvc -w
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME                 STATUS   VOLUME                 CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-myboot-volumeclaim-%userid%   Bound    my-persistent-volume   100Mi      RWO            pv-demo        3s
-----
-
-
-
-가장 큰 차이점은 이제 Pod에서 볼륨 구성을 직접 정의하는 것이 아니라 사용할 _영구 볼륨 클레임_을 `volumes` 섹션에서 정의한다는 것입니다.
-
-
-
-[source, yaml]
-----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: myboot-demo
-spec:
-  containers:
-  - name: myboot-demo
-    image: quay.io/rhdevelopers/myboot:v4
-    securityContext:
-      privileged: true    
-    volumeMounts:
-    - mountPath: /tmp/demo
-      name: demo-volume
-
-  volumes:
-  - name: demo-volume
-    persistentVolumeClaim:
-      claimName: myboot-volumeclaim
-----
-
-[.console-input]
-[source,bash]
-----
-cat <<EOF | oc create -f -
-apiVersion: v1
-kind: Pod
-metadata:
-  name: myboot-demo
-spec:
-  containers:
-  - name: myboot-demo
-    image: quay.io/rhdevelopers/myboot:v4
-    securityContext:
-      privileged: true
-    volumeMounts:
-    - mountPath: /tmp/demo
-      name: demo-volume
-
-  volumes:
-  - name: demo-volume
-    persistentVolumeClaim:
-      claimName: myboot-volumeclaim
-EOF
-----
-
-
-[.console-input]
-[source,bash]
-----
-oc describe pod myboot-demo
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-Volumes:
-  demo-volume:
-    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
-    ClaimName:  myboot-volumeclaim
-    ReadOnly:   false
-----
-
-이제 Pod 설명에 볼륨이 직접 설정되지 않고 지속적인 볼륨 청구를 통해 설정된다는 내용이 표시됩니다.
-
-
-[.console-input]
-[source,bash]
-----
-oc exec -ti myboot-demo -- /bin/bash
-----
-
-그런 다음 Pod 내에서 '/tmp/demo' 디렉터리에 일부 콘텐츠를 생성합니다.
-
-[.console-input]
-[source,bash]
-----
-curl localhost:8080/appendgreetingfile
-----
-
-
-
-그리고 이 작업을 완료하자마자 `PerciousVolume`이 매핑되는 노드의 경로에 다음이 표시될 것으로 예상됩니다.
-
-
-==Terminal#2에서 실행.
-
-
-
-[#kubectl-deploy-app]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc project volume-%userid%
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-Now using project "volume-%userid%" on server "https://172.30.0.1:443".
-----
-
-NOTE: `oc project volume-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 volume-%userid%로 변경합니다.
-
-
-우선 pod가 배포되어 있는 노드를 확인합니다.
-
-
-[.console-input]
-[source,bash]
-----
-oc get pod -o wide
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME          READY   STATUS    RESTARTS   AGE     IP            NODE                                       NOMINATED NODE   READINESS GATES
-myboot-demo   1/1     Running   0          4m19s   10.131.0.29   ip-10-0-27-23.us-east-2.compute.internal   <none>           <none>
-----
-
-노드로  접속합니다.
-
-[.console-input]
-[source,bash]
-----
-oc debug node/ip-10-0-27-23.us-east-2.compute.internal
-chroot /host
----
-
-NOTE: oc debug node 명령어는 node를 디버깅하기 위한 pod를 생성하고 노드에 접속합니다.
-
-
-이제 노드에 있으므로 Pod가 `/tmp/demo`로 마운트한 `{mount-dir}` 디렉터리를 살펴보겠습니다.
-
-[.console-input]
-[source,bash]
-----
-watch -n1 -- "ls -al /mnt/persistent-volume-%userid% && eval ""cat /mnt/persistent-volume-%userid%/greeting.txt"""
-----
-
-
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-total 4
-drwxr-xr-x. 1 root root 24 Jul 19 14:06 .
-drwxr-xr-x. 1 root root 42 Jul 13 09:21 ..
--rw-r--r--. 1 root root  5 Jul 19 14:06 greeting.txt
-Jambo
-----
-
-
-
-==== Clean Up
-
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc delete pod myboot-demo
-----
-
-모든 것이 정리되면 다음을 실행하십시오.
-
-
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc get pvc
-----
-
-Results in:
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME                 STATUS   VOLUME                 CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-myboot-volumeclaim-%userid%   Bound    my-persistent-volume   100Mi      RWO            pv-demo        14m
-----
-
-Pod가 삭제되었더라도 PVC(및 PV)는 여전히 존재하므로 수동으로 삭제해야 합니다.
-
-[.console-input]
-[source,bash]
-----
-oc delete pvc myboot-volumeclaim-%userid%
-oc delete pv my-persistent-volume-%userid%
-----
-
-
-
-
-
-
-
-== Static vs Dynamic Provisioning
-
-영구 볼륨은 동적으로 또는 정적으로 프로비저닝될 수 있습니다.
-
-정적 프로비저닝을 통해 클러스터 관리자는 *기존* 저장 장치를 클러스터에서 사용할 수 있도록 할 수 있습니다.
-이런 방식으로 완료되면 PV와 PVC를 수동으로 제공해야 합니다.
-
-지금까지 마지막 예에서는 정적 프로비저닝을 살펴보았습니다.
-
-동적 프로비저닝을 사용하면 클러스터 관리자가 스토리지를 사전 프로비저닝할 필요가 없습니다.
-대신 사용자가 요청할 때 자동으로 스토리지를 프로비저닝합니다.
-이를 실행하려면 스토리지 클래스 객체와 이를 참조하는 PVC를 제공해야 합니다.
-PVC가 생성되면 스토리지 디바이스와 PV가 자동으로 생성됩니다.
-동적 프로비저닝의 주요 목적은 클라우드 제공업체 솔루션과 협력하는 것입니다.
-
-일반적으로 Kubernetes 구현은 누구나 동적 프로비저닝을 빠르게 시작할 수 있도록 기본 스토리지 클래스를 제공합니다.
-다음을 실행하여 기본 스토리지 클래스에서 정보를 얻을 수 있습니다.
+일반적인 유저는 PV를 직접 생성할 권한이 없으며, PVC를 통해 특정 조건의 스토리지를 요청합니다.
+PVC를 생성하면 관리자가 미리 생성한 PV 또는 StorageClass를 통해 동적으로 생성되는 스토리지를 사용할 수 있게 됩니다.
+
+이처럼 Kubernetes가 **영구 볼륨(PV)**을 생성하는 방법에는 **Static Provisioning(정적 프로비저닝)**과 Dynamic Provisioning(동적 프로비저닝) 두 가지 방식이 있습니다.
+
+* 정적 프로비저닝
+** 관리자가 미리 PV(Persistent Volume)를 생성해 두고, 필요한 Pod가 이를 요청해서 사용하는 방식
+** 사용자가 PVC(Persistent Volume Claim)를 요청하면, Kubernetes가 미리 생성된 PV 중에서 PVC 조건과 일치하는 볼륨을 찾아 바인딩
+** 장점: 관리자가 직접 스토리지를 생성하고 관리 가능
+** 단점: 필요한 크기의 PV가 없으면 수동으로 추가해야 함, 미리 프로비저닝한 PV가 사용되지 않을 경우 리소스 낭비
+
+* 동적 프로비저닝
+** 특정 스토리지 백엔드와 연결되어 **스토리지 공급자(provisioner)**가 자동으로 PV를 생성해주는 StorageClass를 사용하는 방식
+** PVC 요청이 들어오면 Kubernetes가 사전에 구성된 StorageClass를 통해 자동으로 필요한 PV를 생성
+** 장점: 관리자가 미리 PV를 만들어 놓을 필요 없음, 스토리지 활용 최적화
+** 단점: 자동 생성된 PV를 직접 제어하기 어려움, 스토리지 제공자의 지원 필요
+
+기본적으로 OpenShift가 클라우드 공급자에 설치되면 클라우드의 기본 컨테이너 스토리지 인터페이스를 사용하여 스토리지 클래스가 자동으로 생성됩니다. +
+예를 들어 AWS의 경우, gp2-csi나 gp3-csi 같이 AWS EBS를 가리키는 기본 스토리지 클래스가 제공됩니다.
+
+다음을 실행하여 기본 스토리지 클래스 정보를 얻을 수 있습니다.
 
 [.console-input]
 [source,bash]
@@ -1219,25 +820,39 @@ PVC가 생성되면 스토리지 디바이스와 PV가 자동으로 생성됩니
 oc get sc
 ----
 
-
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
 ----
-NAME            PROVISIONER             AGE
-gp2 (default)   kubernetes.io/aws-ebs   31h
+NAME                                    PROVISIONER                             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+gp2-csi                                 ebs.csi.aws.com                         Delete          WaitForFirstConsumer   true                   15h
+gp3-csi                                 ebs.csi.aws.com                         Delete          WaitForFirstConsumer   true                   15h
+ocs-storagecluster-ceph-rbd (default)   openshift-storage.rbd.csi.ceph.com      Delete          Immediate              true                   14h
+ocs-storagecluster-cephfs               openshift-storage.cephfs.csi.ceph.com   Delete          Immediate              true                   14h
+openshift-storage.noobaa.io             openshift-storage.noobaa.io/obc         Delete          Immediate              false                  14h
 ----
 
-기본적으로 OpenShift가 클라우드 공급자에 설치되면 클라우드의 기본 영구 기술을 사용하여 스토리지 클래스가 자동으로 생성됩니다. +
-예를 들어 AWS의 경우 AWS EBS를 가리키는 기본 스토리지 클래스가 제공됩니다.
+현재 이 클러스터에서는 AWS EBS 뿐만 아니라 OpenShift Data Foundation(ODF)라고 하는 Kubernetes 기반의 분산 스토리지 솔루션도 함께 사용하고 있습니다.
+이름 옆에 `(default)` 가 붙은 스토리지 클래스는 사용자가 별도로 스토리지 클래스를 지정하지 않을 경우 기본적으로 사용되는 스토리지 클래스를 의미합니다.
 
-그런 다음 영구 볼륨을 자동으로 생성하는 영구 볼륨 신청을 생성할 수 있습니다.  
+각 스토리지 클래스와 같이 표시되어 있는 `RECLAIM POLICY`와 `VOLUME BINDING MODE`는 PV 처리 방식에 대한 중요한 설정입니다.
+
+**볼륨 바인딩 모드(Volume Binding Mode)** +
+Volume Binding Mode는 스토리지 바인딩 시점 결정하는 것으로, +
+(1) PVC 생성 즉시 PV를 바인딩 및 프로비저닝하는 Immediate 모드와 (2) PVC가 Pod에 연결될 때까지 대기하는 WaitForFirstConsumer 모드가 있습니다.
+WaitForFirstConsumer 모드는 얼핏 보면 느리고 불편해보이지만, Pod가 스케줄링된 후 해당 노드에 맞는 스토리지를 바인딩하기 때문에 특정 노드에 의존하는 스토리지를 사용할 때 유용합니다.
+
+**리클레임 폴리시(Reclaim Policy)** +
+Reclaim Policy는 PVC가 삭제된 후 PV의 처리 방법을 결정합니다. +
+PVC가 삭제된 후, PVC에 연결되어 있던 PV를 삭제할지(Delete), 유지할지(Retain) 여부를 의미합니다. Retain 정책을 사용할 경우, PVC가 삭제되어도 PV의 데이터는 유지되며 다른 Pod에서 다시 연결할 수 있습니다. 
+
+그럼 이제 스토리지 클래스를 활용하여 동적으로 PV를 프로비저닝하는 예제를 확인해보겠습니다. 
 
 [source, yaml]
 ----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: myboot-volumeclaim-%userid%
+  name: myboot-pvc-odf-%userid%
 spec:
   accessModes:
     - ReadWriteOnce
@@ -1246,13 +861,42 @@ spec:
       storage: 10Mi
 ----
 
-_storage 클래스_를 지정하지 않았지만 기본값으로 정의된 클래스가 있으므로 _PVC_는 암시적으로 해당 클래스를 참조합니다. +
+위의 예제 PVC yaml 내용을 보면, _스토리지 클래스_ 를 따로 지정하지 않았습니다. +
+하지만 기본값으로 정의된 클래스가 있으므로 _PVC_는 암시적으로 해당 클래스를 참조하여 자동으로 PV를 동적 프로비저닝 합니다.
 (이 Pod 정의를 `myboot-pertant-volume-claim.yaml`과 비교하는 것을 고려해 볼 수 있습니다)
-
-
 
 .정적 PVC와 동적 PVC의 차이점(정적 PV 포함)
 image::2-9.png[2-9]
+
+
+[.console-input]
+[source,bash]
+----
+cat <<EOF | oc create -f -
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: myboot-pvc-odf-%userid%
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+EOF
+oc get pvc
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+NAME                        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                  VOLUMEATTRIBUTESCLASS   AGE
+myboot-pvc-odf-%userid%   Bound    pvc-f3d03d5c-0736-478a-bc6d-45d8f20aad9a   10Mi       RWO            ocs-storagecluster-ceph-rbd   <unset>                 4s
+----
+
+기본 스토리지 클래스로 설정된 `ocs-storagecluster-ceph-rbd` 를 통해 PV를 동적으로 프로비저닝하고, VOLUME BINDING MODE가 `Immediate`이므로 바로 PV가 바인딩된 것을 확인할 수 있습니다.
+
+이어서 `WaitForFirstConsumer` 볼륨 바인딩 모드를 사용하는 `gp3-csi` 스토리지 클래스를 사용해 PV를 요청해보도록 하겠습니다.
 
 [.console-input]
 [source,bash]
@@ -1263,30 +907,29 @@ apiVersion: v1
 metadata:
   name: myboot-volumeclaim-%userid%
 spec:
+  storageClassName: gp3-csi
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 10Mi
 EOF
-
-----
-
-[.console-input]
-[source,bash]
-----
 oc get pvc
 ----
+
 
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
 ----
-NAME                 STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-myboot-volumeclaim-%userid%   Pending                                      gp2            46sç
+NAME                        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                  VOLUMEATTRIBUTESCLASS   AGE
+myboot-pvc-odf-%userid%   Bound    pvc-f3d03d5c-0736-478a-bc6d-45d8f20aad9a   10Mi       RWO            ocs-storagecluster-ceph-rbd   <unset>                 4s
+myboot-volumeclaim-%userid%   Pending                                                                        gp3-csi                       <unset>                 7s
 ----
 
+이전에 생성한 _PVC_ 와 달리, myboot-volumeclaim-%userid% _PVC_ 는 _Pending_ 상태에서 멈춰있습니다. 
+`gp3-csi` 스토리지 클래스는 볼륨 바인딩 모드로 `WaitForFirstConsumer` 를 사용 하고 있기 때문에, Pod가 볼륨을 요청하지 않으면 _PVC_ 는 Pending 상태로 유지되고 _PV_ 가 생성되지 않습니다.
 
-_PVC_는 _Pending_ 상태입니다. 동적 스토리지를 생성 중이라는 점과 _pod_가 볼륨을 요청하지 않는 동안 _PVC_는 보류 상태로 유지되고 _PV_는 생성되지 않음을 의미하기 때문입니다.
+그럼 해당 PVC에 대해 볼륨을 요청하는 Pod를 생성해보겠습니다.
 
 [.console-input]
 [source,bash]
@@ -1300,8 +943,6 @@ spec:
   containers:
   - name: myboot-demo
     image: quay.io/rhdevelopers/myboot:v4
-    securityContext:
-      privileged: true
     volumeMounts:
     - mountPath: /tmp/demo
       name: demo-volume
@@ -1309,13 +950,10 @@ spec:
   volumes:
   - name: demo-volume
     persistentVolumeClaim:
-      claimName: myboot-volumeclaim-%user1%
+      claimName: myboot-volumeclaim-%userid%
 EOF
 ----
 
-
-
-* *Terminal#2에서 수행*
 
 [.console-input]
 [source,bash]
@@ -1342,53 +980,21 @@ oc get pvc
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
 ----
-NAME                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-myboot-volumeclaim-%userid%   Bound    pvc-6de4f27e-bd40-4b58-bb46-91eb08ca5bd7   1Gi        RWO            gp2            116s
+NAME                        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                  VOLUMEATTRIBUTESCLASS   AGE
+myboot-pvc-odf-%userid%       Bound    pvc-97d80466-3f18-4b81-9ac1-4809857b6769   10Mi       RWO            ocs-storagecluster-ceph-rbd   <unset>                 7m
+myboot-volumeclaim-%userid%   Bound    pvc-f95465b7-c3be-404f-9ed6-eee2eec4ad2b   1Gi        RWO            gp3-csi                       <unset>                 6m56s
 ----
 
+이제 PVC에 PV가 _Bound_ 되었습니다.
 
-
-이제 볼륨 청구가 볼륨에 _Bound_되었습니다.
-
-마지막으로 _PV_가 자동으로 생성되었는지 확인할 수 있습니다.
-
-[.console-input]
-[source,bash]
-----
-oc get pv
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS   REASON   AGE
-pvc-170f2e9a-4afc-4869-bd19-f10c86bff34b   10Mi       RWO            Delete           Bound    myspace/myboot-volumeclaim   standard                56s
-----
-
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS   REASON   AGE
-pvc-6de4f27e-bd40-4b58-bb46-91eb08ca5bd7   1Gi        RWO            Delete           Bound    default/myboot-volumeclaim   gp2                     77s
-----
-
-
-_CLAIM_ 필드는 _PV_ 생성을 담당하는 _PVC_를 가리킵니다.
 
 === Clean Up
+
+실습을 마쳤으면 생성했던 리소스를 삭제합니다. 
 
 [.console-input]
 [source,bash]
 ----
 oc delete pod myboot-demo
-oc delete pvc myboot-volumeclaim-%userid% 
+oc delete pvc myboot-volumeclaim-%userid% myboot-pvc-odf-%userid%
 ----
-
-== 분산 파일 시스템
-
-클라우드 제공업체는 분산 스토리지를 제공하므로 모든 노드에서 데이터를 항상 사용할 수 있다는 점에 유의하는 것이 중요합니다.
-마지막 예에서 본 것처럼 이 스토리지 클래스는 모든 노드가 동일한 디스크 콘텐츠를 볼 수 있도록 보장합니다.
-
-예를 들어 온프레미스에서 Kubernetes/OpenShift를 사용 중이거나 공급업체 솔루션으로 릴레이하지 않으려는 경우 Kubernetes에서 분산 파일 시스템도 지원됩니다.
-그렇다면 NFS, https://www.gluster.org/[GlusterFS ] 또는 https://ceph.io/[Ceph]를 사용하는 것이 좋습니다.

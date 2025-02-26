@@ -10,8 +10,8 @@
 watch -n 1 "kubectl get pods -o wide \#<.>
   | awk '{print \$1 \" \" \$2 \" \" \$3 \" \" \$5 \" \" \$7}' | column -t" #<.>
 ----
-<.> the `-o wide` option allows us to see the node that the pod is schedule to
-<.> to keep the line from getting too long we'll use `awk` and `column` to get and format only the columns we want
+<.> `-o wide` 옵션을 사용하면 Pod가 예약된 노드를 볼 수 있습니다.
+<.> 줄이 너무 길어지는 것을 방지하기 위해 `awk`와 `column`을 사용하여 원하는 열만 가져오고 형식을 지정합니다.
 
 --
 ====
