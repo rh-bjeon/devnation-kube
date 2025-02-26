@@ -3,6 +3,8 @@
 
 * *Terminal#1에서 수행*
 
+image::2-3.png[2-3]
+
 먼저 작업할 프로젝트를 만듭니다. 
 
 * `myspace-%userid%` 프로젝트 생성
@@ -52,7 +54,8 @@ quarkus-demo   1/1     Running   0          18s
 NOTE: 아직은 Pod를 생성하지 않았기 때문에 아무런 Pod 정보도 보이지 않습니다. 다음 명령어를 통해 Pod 생성시, `ContainerCreating` 상태에서 `Running` 상태로 변경되는 것을 확인할 수 있습니다.
 
 
-* *Terminal#1 옆의 `+` 버튼을 눌러 Terminal#2 생성, Terminal#2에서 수행*
+* *Terminal#1 옆의 `+` 버튼을 눌러 Terminal#2 생성*
+* *아래 명령어는 Terminal#2에서 실행*
 
 [#create-namespace]
 [.console-input]
