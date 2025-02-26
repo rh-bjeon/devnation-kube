@@ -166,19 +166,11 @@ No resources found in myspace namespace.
 
 
 
-
-
-
-
-
-
-
 이제 Liveness 및 Readiness 프로브 세트를 사용하여 애플리케이션을 배포하겠습니다.  아래의 배포 yaml을 살펴보세요.
 
 
 [.console-output]
 [source,yaml]
-.{quick-open-file}
 ----
 apiVersion: apps/v1
 kind: Deployment
@@ -294,8 +286,7 @@ oc describe deployment myboot
 ----
 
 
-
-Service를 배포하세요:
+Service를 배포하세요:
 
 [#deploy-myboot-rolling]
 [.console-input]
@@ -319,8 +310,6 @@ EOF
 ----
 
 
-
-
 replicas 변경:
 
 [#change-replicas]
@@ -341,7 +330,7 @@ oc scale deployment myboot --replicas=3
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc project resource-%userid%
+oc project probe-%userid%
 ----
 
 [.console-output]

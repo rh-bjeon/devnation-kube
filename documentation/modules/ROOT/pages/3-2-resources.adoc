@@ -182,7 +182,7 @@ No resources found in myspace namespace.
 [.console-input]
 [source, bash]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -213,7 +213,7 @@ Pod 정보를 검색하세요.:
 [.console-input]
 [source, bash]
 ----
-PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+PODNAME=$(oc get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
 ----
 
 [#no-limits-resource]
@@ -317,7 +317,7 @@ oc delete deployment myboot
 [.console-input]
 [source, bash]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -387,7 +387,7 @@ Pod에서 `oc describe` 를 사용하여 실패에 대한 자세한 정보를 �
 [.console-input]
 [source, bash]
 ----
-PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+PODNAME=$(oc get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
 ----
 
 [#no-limits-resource]
@@ -453,7 +453,7 @@ Events:
 
 
 
-`replace`에 의해 수행된 변경 기록을 유지하면서 배포를 수정해야 합니다.
+`oc replace` 명령어를 사용하면 수행된 변경 기록을 유지하면서 배포를 수정할 수 있습니다.
 
 [#apply-deployment-sane-limit-resource]
 [.console-input]
@@ -502,7 +502,7 @@ EOF
 [.console-input]
 [source, bash]
 ----
-PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+PODNAME=$(oc get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
 ----
 
 [#no-limits-resource]
@@ -635,6 +635,7 @@ watch -n 1 -- oc get pods
 
 
 다른 터미널에서 해당 서비스를 반복하고 컬링합니다.
+
 * *Terminal#2에서 수행*
 
 [#kubectl-deploy-app]
@@ -656,14 +657,14 @@ NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
 ----
 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-PORT=$(kubectl get service myboot -o jsonpath="{.spec.ports[*].port}")
+PORT=$(oc get service myboot -o jsonpath="{.spec.ports[*].port}")
 ----
 
 
@@ -706,14 +707,14 @@ NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
 ----
 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-PORT=$(kubectl get service myboot -o jsonpath="{.spec.ports[*].port}")
+PORT=$(oc get service myboot -o jsonpath="{.spec.ports[*].port}")
 ----
 
 
@@ -741,7 +742,7 @@ Pod의 resource 요청/제한 내용을 확인합니다.
 [.console-input]
 [source, bash]
 ----
-PODNAME=$(kubectl get pod -l app=myboot -o name)
+PODNAME=$(oc get pod -l app=myboot -o name)
 ----
 
 [#podresources-sane-limit-resource]
@@ -793,7 +794,7 @@ curl: (56) Recv failure: Connection reset by peer
 [.console-input]
 [source, bash]
 ----
-PODNAME=$(kubectl get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
+PODNAME=$(oc get pod -l app=myboot --field-selector 'status.phase!=Terminating' -o name)
 ----
 
 [#no-limits-resource]

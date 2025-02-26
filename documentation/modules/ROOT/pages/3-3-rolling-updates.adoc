@@ -46,75 +46,9 @@ oc get service
 
 [TIP,subs="attributes+,+macros"]
 ====
-방금 `Resources and Limits`에서 왔다면 필요한 Pod 및 배포 그리고 서비스가 이미 활성화되어 있어야 합니다. +
+이전 실습 `Resources and Limits` 에서 바로 넘어왔다면 필요한 Pod 및 배포 그리고 서비스가 이미 생성성되어 있어야 합니다. +
 그렇지 않은 경우 다음 명령을 실행하여 필요한 요소를 `resource-%userid%` 에 배포해야 합니다.
 ====
-
-
-
-필요한 경우 Spring Boot 앱을 배포합니다.
-
-[#deploy-myboot-rolling]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-cat <<EOF | oc create -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app: myboot
-  name: myboot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: myboot
-  template:
-    metadata:
-      labels:
-        app: myboot
-    spec:
-      containers:
-      - name: myboot
-        image: quay.io/rhdevelopers/myboot:v1
-        ports:
-          - containerPort: 8080
-        resources:
-          requests: 
-            memory: "300Mi" 
-            cpu: "250m" # 1/4 core
-          # NOTE: These are the same limits we tested our Docker Container with earlier
-          # -m matches limits.memory and --cpus matches limits.cpu
-          limits:
-            memory: "900Mi"
-            cpu: "2000m" # 2 core
-EOF
-----
-
-
-[#deploy-myboot-rolling]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-cat <<EOF | oc create -f -
-apiVersion: v1
-kind: Service
-metadata:
-  name: myboot
-  labels:
-    app: myboot    
-spec:
-  ports:
-  - name: http
-    port: 8080
-  selector:
-    app: myboot
-  type: LoadBalancer
-EOF
-----
-
-
 
 * *Terminal#1에서 작업*
 
@@ -248,11 +182,11 @@ RollingUpdateStrategy:  25% max unavailable, 25% max surge
 .
 ----
 
-NOTE: `StrategyType` 옵션에는 `RollingUpdate` 및 `Recreate`가 포함됩니다.
+NOTE: `StrategyType` 옵션에는 `RollingUpdate` 및 `Recreate` 가 포함됩니다.
 
 
 
-replicas를 변경합니다.:
+replicas를 변경합니다.
 
 
 [#edit-deployment-replicas-rolling]
@@ -263,7 +197,7 @@ oc edit deployment myboot
 ----
 
 
-"replicas" 항목을 찾으세요:
+"replicas" 항목을 찾습니다.
 
 [.console-output]
 [source,yaml]
@@ -277,8 +211,7 @@ spec:
       app: myboot
 ----
 
-replicas 값을  "2"로 변경합니다.
-
+replicas 값을  "2"로 변경합니다.
 
 [.console-output]
 [source, yaml]
@@ -292,13 +225,6 @@ spec:
       app: myboot
 ----
 
-TIP: 편집기의 단축키는 아래와 같습니다. +
-* *`i`* : 입력 모드로 전환(커서 앞에서 입력 시작) +
-- 입력모드 전환 후, 방향키로 커서를 이동 및 `백스페이스` 로 문자 삭제 가능 +
-* *`:`* : 커멘드라인 모드로 전환 +
-*(커맨드라인 모드에서) *`w`* : 파일 저장 +
-*(커맨드라인 모드에서) *`q`* : 파일 종료 +
-
 TIP: 아래와 같은 순서로 작업하세요. +
 1. "replicas: 1"에서 숫자 1에 커서를 두고 `i` 키를 눌러 입력모드로 전환하세요. +
 2. `방향키` 와 `백스페이스` 를 이용하여 숫자 "1"을 삭제 후, "2"를 입력하세요. +
@@ -306,8 +232,14 @@ TIP: 아래와 같은 순서로 작업하세요. +
 4. `:` 키를 눌러 커멘드라인 모드로 전환하세요. +
 5. `wq` 를 입력한 후 `enter` 키를 누르세요.
 
+TIP: 편집기의 단축키는 아래와 같습니다. +
+*`i`* : 입력 모드로 전환(커서 앞에서 입력 시작) +
+- 입력모드 전환 후, 방향키로 커서를 이동 및 `백스페이스` 로 문자 삭제 가능 +
+*`:`* : 커멘드라인 모드로 전환 +
+(커맨드라인 모드에서) *`w`* : 파일 저장 +
+(커맨드라인 모드에서) *`q`* : 파일 종료 +
 
-편집기를 저장하고 닫으면 새 포드가 활성화됩니다.
+편집기를 저장하고 닫으면 새 파드가 활성화됩니다.
 
 [#edit-deployment-replicas-get-pod-rolling]
 [.console-input]
@@ -355,15 +287,6 @@ image 속성 부분을 찾으세요.:
         name: myboot
 ----
 
-
-
-TIP: 편집기의 단축키는 아래와 같습니다. +
-* *`i`* : 입력 모드로 전환(커서 앞에서 입력 시작) +
-- 입력모드 전환 후, 방향키로 커서를 이동 및 `백스페이스` 로 문자 삭제 가능 +
-* *`:`* : 커멘드라인 모드로 전환 +
-*(커맨드라인 모드에서) *`w`* : 파일 저장 +
-*(커맨드라인 모드에서) *`q`* : 파일 종료 +
-
 TIP: 아래와 같은 순서로 작업하세요. +
 1. "image: quay.io/rhdevelopers/myboot:v1"에서 숫자 1에 커서를 두고 `i` 키를 눌러 입력모드로 전환하세요. +
 2. `방향키` 와 `백스페이스` 를 이용하여 숫자 "1"을 삭제 후, "2"를 입력하세요. +
@@ -371,7 +294,12 @@ TIP: 아래와 같은 순서로 작업하세요. +
 4. `:` 키를 눌러 커멘드라인 모드로 전환하세요. +
 5. `wq` 를 입력한 후 `enter` 키를 누르세요.
 
-
+TIP: 편집기의 단축키는 아래와 같습니다. +
+*`i`* : 입력 모드로 전환(커서 앞에서 입력 시작) +
+- 입력모드 전환 후, 방향키로 커서를 이동 및 `백스페이스` 로 문자 삭제 가능 +
+*`:`* : 커멘드라인 모드로 전환 +
+(커맨드라인 모드에서) *`w`* : 파일 저장 +
+(커맨드라인 모드에서) *`q`* : 파일 종료 +
 
 [#edit-deployment-v2-get-pod-rolling]
 [.console-input]
@@ -476,16 +404,16 @@ REVISION  CHANGE-CAUSE
 2         <none>
 ----
 
-다음 명령을 사용하여 v1으로 롤백할 수 있습니다.
+다음 명령을 사용하여 이전 버전전으로 롤백할 수 있습니다.
 
 [#describe-rollback-rolling]
 [.console-input]
 [source, bash]
 ----
-oc rollout undo deployment/myboot --to-revision=1
+oc rollout undo deployment/myboot
 ----
 
-그리고 Aloha로 롤백됩니다.:
+그리고 애플리케이션이 Aloha로 롤백됩니다.
 
 [.console-output]
 [source,bash]
