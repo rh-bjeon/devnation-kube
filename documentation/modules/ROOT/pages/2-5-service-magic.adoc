@@ -42,7 +42,7 @@ NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -71,7 +71,7 @@ EOF
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -100,7 +100,7 @@ EOF
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -171,7 +171,7 @@ NOTE: 배포된 pod를 label값을 포함하여 실시간으로 확인합니다.
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: v1
 kind: Service
 metadata:
@@ -235,14 +235,14 @@ IMPORTANT: AWS에 있는 경우 `ip` 대신 `hostname` 을 가져와야 합니�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(kubectl get service my-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service my-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
 ----
 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-PORT=$(kubectl get service my-service -o jsonpath="{.spec.ports[*].port}")
+PORT=$(oc get service my-service -o jsonpath="{.spec.ports[*].port}")
 ----
 
 

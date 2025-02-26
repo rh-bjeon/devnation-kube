@@ -93,7 +93,7 @@ NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -195,7 +195,7 @@ NOTE: `-f` 매개변수를 사용하여 로그를 실시간으로 출력할 수 
 oc logs my-deployment-5dc67997c7-m7z9f -f
 ----
 
-아래는  *다른 터미널(Terminal#2)*에서 실행하세요.:
+아래는  **다른 터미널(Terminal#2)**에서 실행하세요.:
 
 * *Terminal#2에서 수행*
 
@@ -218,7 +218,7 @@ NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네
 [.console-input]
 [source,bash]
 ----
-oc exec -it my-deployment-5dc67997c7-m7z9f /bin/bash
+oc exec -it my-deployment-5dc67997c7-m7z9f -- /bin/bash
 ----
 
 IMPORTANT: pod 이름( my-deployment-5dc67997c7-m7z9f)은 각 실습 클러스터에서 조회 된 값으로 변경하여 입력하세요.
@@ -263,7 +263,7 @@ NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 네
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: v1
 kind: Service
 metadata:
@@ -285,14 +285,14 @@ EOF
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(kubectl get service the-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service the-service -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
 ----
 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-PORT=$(kubectl get service the-service -o jsonpath="{.spec.ports[*].port}")
+PORT=$(oc get service the-service -o jsonpath="{.spec.ports[*].port}")
 ----
 
 

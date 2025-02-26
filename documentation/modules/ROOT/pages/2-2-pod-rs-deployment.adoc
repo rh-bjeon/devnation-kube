@@ -1,7 +1,7 @@
 = Pod, ReplicaSet, Deployment
 
 
-* *터미널1에서 수행*
+* *Terminal#1에서 수행*
 
 먼저 작업할 프로젝트를 만듭니다. 
 
@@ -26,7 +26,7 @@ oc project myspace-%userid%
 
 NOTE: Pod 생성 명령어 실행 전에 아래 명령어를 실행해두면, Pod 생성 단계에서 Pod의 상태 변화를 확인할 수 있습니다:
 
-* *터미널1에서 수행*
+* *Terminal#1에서 수행*
 [#watch-pod]
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -52,7 +52,7 @@ quarkus-demo   1/1     Running   0          18s
 NOTE: 아직은 Pod를 생성하지 않았기 때문에 아무런 Pod 정보도 보이지 않습니다. 다음 명령어를 통해 Pod 생성시, `ContainerCreating` 상태에서 `Running` 상태로 변경되는 것을 확인할 수 있습니다.
 
 
-* *터미널1 옆의 `+` 버튼을 눌러 터미널2 생성, 터미널2에서 수행*
+* *Terminal#1 옆의 `+` 버튼을 눌러 Terminal#2 생성, Terminal#2에서 수행*
 
 [#create-namespace]
 [.console-input]
@@ -125,7 +125,7 @@ exit
 oc delete pod quarkus-demo
 ----
 
-* *터미널2에서 확인*
+* *Terminal#2에서 확인*
 
 [#watch-all-naked-pod]
 [.console-input]
@@ -154,7 +154,7 @@ NOTE: OpenShift 콘솔의 언어 설정이 영어일 경우 'ReplicaSets', 한�
 
 ReplicaSet 생성:
 
-* *터미널1에서 수행*
+* *Terminal#1에서 수행*
 
 [#create-replicaset]
 [.console-input]
@@ -201,7 +201,7 @@ rs-quarkus-demo-t26gt   1/1     Running   0          58s   app=quarkus-demo,env=
 ----
 
 
-* *터미널2에서 수행*
+* *Terminal#2에서 수행*
 
 [#get-rs]
 [.console-input]
@@ -316,7 +316,7 @@ NOTE: OpenShift 콘솔의 언어 설정이 영어일 경우 'Deployment', 한국
 이번에는 Deployment를 배포해보겠습니다.
 Deployment는 Replicaset를 통해 Pod를 배포하며, 배포할 Pod의 spec이 변화하면 새로운 Replicaset을 생성하여 새로운 Pod를 배포합니다.
 
-* *터미널2에서 수행*
+* *Terminal#2에서 수행*
 
 [#create-deployment]
 [.console-input]
