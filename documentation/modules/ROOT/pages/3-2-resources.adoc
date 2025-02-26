@@ -1,110 +1,21 @@
 = Resource Limits
 
-이어서 진행되는 II. 중급 섹션에서는 Kubernetes에서 고려해야 할 운영(Operations) 측면의 요소들을 다룰 예정입니다.
-우선 이 실습에서는 Kubernetes에서 컨테이너/Pod가 소비하는 리소스를 어떻게 조절하고 모니터링할 수 있는지 살펴보겠습니다.
+이 실습에서는 Kubernetes에서 컨테이너/Pod가 소비하는 리소스를 어떻게 조절하고 모니터링할 수 있는지 살펴보겠습니다.
+
+Kubernetes에서는 컨테이너의 리소스를 **"요청(Requests)"**과 **"제한(Limits)"**으로 설정할 수 있습니다.
+이 개념을 이해하는 것이 매우 중요합니다.
+
+*요청(Requests):
+** 애플리케이션이 실행되기 위해 최소한으로 필요한 리소스입니다.
+** 예를 들어, cpu: 250m을 요청하면 CPU 0.25코어 이상을 사용할 수 있는 노드에서만 실행됩니다.
+
+*제한(Limits):
+** 애플리케이션이 사용할 수 있는 최대 리소스를 설정합니다.
+** 예를 들어, memory: 512Mi를 설정하면 최대 512MB까지만 메모리를 사용할 수 있습니다.
+** 이 제한을 초과하면 컨테이너가 강제 종료(OOM Kill)될 수도 있습니다.
 
 
-[.console-output]
-[source,bash]
-----
-[user@host ~]$ oc set resources deployment/hello --limits memory=1Gi
-----
-
-oc set resources 명령 외에도 YAML 형식의 파일에서 리소스 제한을 정의할 수 있습니다.
-
-[.console-output]
-[source,bash]
-----
-apiVersion: apps/v1
-kind: Deployment
-...output omitted...
-  spec:
-    containers:
-    - image: registry.access.redhat.com/ubi9/nginx-120:1-86
-      name: hello
-      resources:
-        requests:
-          cpu: 100m
-          memory: 500Mi
-        limits:
-          cpu: 200m
-          memory: 1Gi
-----
-
-
-RHOCP가 OOM 이벤트로 인해 포드를 다시 시작하면 포드의 lastState 속성을 업데이트하고 이유를 OOMKilled로 설정합니다.
-
-[.console-output]
-[source,bash]
-----
-[user@host ~]$ oc get pod hello-67645f4865-vvr42 -o yaml
-...output omitted...
-status:
-...output omitted...
-  containerStatuses:
-  - containerID: cri-o://806b...9fe7
-    image: registry.access.redhat.com/ubi9/nginx-120:1-86
-    imageID: registry.access.redhat.com/ubi9/nginx-120:1-86@sha256:1403...fd34
-    lastState:
-      terminated:
-        containerID: cri-o://bbc4...9eb2
-        exitCode: 137
-        finishedAt: "2023-03-08T07:56:06Z"
-        reason: OOMKilled
-        startedAt: "2023-03-08T07:51:43Z"
-    name: hello
-    ready: true
-    restartCount: 1
-...output omitted...
-----
-
-
-= `[설명]` CPU 제한 설정
-CPU 제한은 메모리 제한과 다르게 작동합니다. 컨테이너가 CPU 제한에 도달하면 노드에 사용 가능한 CPU 주기가 있더라도 RHOCP에서 컨테이너의 프로세스를 금지합니다. 애플리케이션은 계속 작동하지만 속도가 느립니다.
-
-반대로 CPU 제한을 설정하지 않으면 컨테이너는 노드에서 사용 가능한 CPU를 최대한 사용할 수 있습니다. 예를 들어 여러 컨테이너에서 CPU 집약적인 작업을 실행하기 때문에 노드의 CPU에 압력이 가해지면 Linux 커널은 컨테이너의 CPU 요청 값에 따라 이러한 모든 컨테이너 간에 CPU 리소스를 공유합니다.
-
-클러스터 및 노드에서 일관된 애플리케이션 동작이 필요한 경우 CPU 제한을 설정해야 합니다. 예를 들어 애플리케이션이 CPU를 사용할 수 있는 노드에서 실행되는 경우 애플리케이션을 최고 속도로 실행할 수 있습니다. 반면에 애플리케이션이 CPU 압력이 있는 노드에서 실행되는 경우 애플리케이션 실행 속도가 느려집니다.
-
-개발 클러스터와 프로덕션 클러스터 간에 동일한 동작이 발생할 수 있습니다. 두 환경의 노드 구성이 다를 수 있으므로 개발 환경에서 프로덕션 환경으로 이동할 때 애플리케이션이 다르게 실행될 수 있습니다.
-
-NOTE: 클러스터에는 제한 사항을 초과하는 하드웨어 구성의 차이가 있을 수 있습니다. 예를 들어 두 클러스터의 노드에는 코어 수가 동일하고 클록 속도가 동일하지 않은 CPU가 있을 수 있습니다. +
-요청 및 제한은 이러한 하드웨어 차이를 고려하지 않습니다. 클러스터가 이러한 방식으로 다른 경우 두 구성에 모두 요청 및 제한이 적절한지 확인합니다.
-
-
-CPU 제한을 설정하면 노드 구성 간의 차이를 완화하고 보다 일관된 동작을 경험할 수 있습니다.
-
-포드의 컨테이너에 대한 CPU 제한을 설정하려면 oc set resources 명령을 사용합니다.
-
-[.console-output]
-[source,bash]
-----
-[user@host ~]$ oc set resources deployment/hello --limits cpu=200m
-YAML 포맷의 파일에서 CPU 제한을 정의할 수도 있습니다.
-
-apiVersion: apps/v1
-kind: Deployment
-...output omitted...
-  spec:
-    containers:
-    - image: registry.access.redhat.com/ubi9/nginx-120:1-86
-      name: hello
-      resources:
-        requests:
-          cpu: 100m
-          memory: 500Mi
-        limits:
-          cpu: 200m
-          memory: 1Gi
-[.console-output]
-[source,bash]
-----
-
-
-= `[실습]` Resources and Limits
-
-네임스페이스를 생성 후, 올바른 네임스페이스에 있는지 확인하세요.
-
+새로운 네임스페이스를 생성 후, 올바른 네임스페이스에 있는지 확인하세요.
 
 [#kubectl-deploy-app]
 [.console-input]
@@ -153,7 +64,7 @@ oc get all
 No resources found in myspace namespace.
 ----
 
-먼저 요청이나 제한 없이 애플리케이션을 배포하세요.:
+먼저 요청이나 제한 없이 애플리케이션을 배포합니다.
 
 [#no-limits-resource]
 [.console-input]
@@ -276,10 +187,11 @@ Events:
   Normal  Started         102s  kubelet            Started container myboot
 ----
 
-NOTE: Containers > myboot > Requests 항목이 없음을 확인하실 수 있습니다.(포드에 구성된 리소스 제한이 없는 것을 확인할 수 있습니다.)
+NOTE: Containers > myboot > Requests 항목이 없음을 확인하실 수 있습니다.+
+(Pod에 구성된 리소스 제한이 없는 것을 확인할 수 있습니다.)
 
 
-해당 배포를 삭제합니다.:
+해당 배포를 삭제합니다.
 
 [#delete-deployment-resource]
 [.console-input]
@@ -288,7 +200,7 @@ NOTE: Containers > myboot > Requests 항목이 없음을 확인하실 수 있습
 oc delete deployment myboot
 ----
 
-리소스 요청을 포함하여 새 배포를 만듭니다.
+리소스를 요청하는 내용을을 포함하여 새 배포를 만듭니다.
 
 [#limits-resource]
 [.console-input]
@@ -339,7 +251,9 @@ NAME                      READY   STATUS    RESTARTS   AGE
 myboot-7b7d754c86-kjwlr   0/1     Pending   0          19s
 ----
 
-오류에 대한 자세한 정보를 얻으려면 다음을 수행하십시오.
+Pod 생성이 Pending 상태에서 더이상 진행되지 않음을 알 수 있습니다.
+
+오류에 대한 자세한 정보를 얻으려면 다음을 실행합니다.
 
 [#get-events-resource]
 [.console-input]
@@ -355,7 +269,9 @@ oc get events --sort-by=.metadata.creationTimestamp
 <unknown>   Warning   FailedScheduling    pod/myboot-7b7d754c86-kjwlr    0/6 nodes are available: 6 Insufficient cpu.
 ----
 
-포드 사양의 "리소스 요청"에서는 하나 이상의 작업자 노드에 N개의 코어와 X용량의 메모리가 사용 가능해야 합니다.  요구 사항을 충족하는 작업자 노드가 없는 경우 이벤트 목록에 "PENDING" 및 해당 표기가 표시됩니다.
+Pod 사양의 "Resource requests"에 특정한 크기의 리소스를 입력하면, 하나 이상의 워커 노드에서 요청하는 N개의 코어와 X용량의 메모리가 사용 가능해야 합니다.  
+
+요구사항을 충족하는 워커 노드가 없는 경우, 이처럼 이벤트 목록에 어떤 리소스가 부족한지 표시됩니다.
 
 Pod에서 `oc describe` 를 사용하여 실패에 대한 자세한 정보를 찾을 수도 있습니다.
 
@@ -430,7 +346,7 @@ Events:
 
 
 
-`oc replace` 명령어를 사용하면 수행된 변경 기록을 유지하면서 배포를 수정할 수 있습니다.
+`oc replace` 명령어를 사용하면 실행된 변경 기록을 유지하면서 배포를 수정할 수 있습니다.
 
 [#apply-deployment-sane-limit-resource]
 [.console-input]
@@ -470,9 +386,9 @@ spec:
 EOF
 ----
 
-위 명령어는 배포 템플릿을 대체하고 포드에 컨테이너 제한을 적용하도록 지시합니다.
-포드 정보를 확인하세요:
+위 명령어는 배포 템플릿을 수정하여 요청하는 리소스의 크기를 줄이고 사용할 수 있는 리소스의 크기를 제한하도록 설정정합니다.
 
+다시 Pod 정보를 확인하세요.
 
 
 [#no-limits-resource]
@@ -488,7 +404,6 @@ PODNAME=$(oc get pod -l app=myboot --field-selector 'status.phase!=Terminating' 
 ----
 oc describe $PODNAME
 ----
-
 
 
 [.console-output]
@@ -573,13 +488,9 @@ Events:
   Normal  Started         29s   kubelet            Started container myboot
 ----
 
+이번에는 이벤트에 오류 없이 Pod가 정상적으로 실행되었습니다.
 
-
-
-
-
-
-서비스를 배포합니다.
+다음에는 서비스를 배포합니다.
 
 [#apply-service-sane-limit-resource]
 [.console-input]
@@ -598,11 +509,10 @@ spec:
     port: 8080
   selector:
     app: myboot
-  type: LoadBalancer
 EOF
 ----
 
-그리고 Pod를 살펴보세요.
+그리고 Pod 상태를 지속적으로 확인합니다.
 [#sysresources-sane-limit-resource]
 [.console-input]
 [source, bash]
@@ -611,7 +521,7 @@ watch -n 1 -- oc get pods
 ----
 
 
-다른 터미널에서 해당 서비스를 반복하고 컬링합니다.
+다른 터미널에서 해당 서비스를 반복하여 컬링합니다.
 
 * *Terminal#2에서 수행*
 
@@ -634,7 +544,7 @@ NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(oc get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service myboot -o jsonpath="{.spec.clusterIP}")
 ----
 
 
@@ -658,62 +568,12 @@ done
 ----
 
 
+이제 인위적으로 메모리를 많이 소비하는 테스트를 수행해 보겠습니다.
+만약 컨테이너가 제한된 것 이상의 메모리를 사용하려고 하면, Kubernetes가 이를 감지하고 OOM(Out of Memory) Kill을 수행하여 컨테이너를 종료할 것입니다.
 
+배포된 애플리케이션에는 `/consume` 이라는 엔드포인트가 있어서, 이 엔드포인트를 호출하면 대량의 메모리를 할당하는 동작을 수행합니다.
 
-또 다른 터미널 창에서 /sysresources 엔드포인트를 컬링합니다.
-
-* *Terminal#3에서 수행*
-
-
-[#kubectl-deploy-app]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc project resource-%userid%
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-Now using project "resource-%userid%" on server "https://172.30.0.1:443".
-----
-
-NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기본 네임스페이스를 resource-%userid%로 변경합니다.
-
-
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-IP=$(oc get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
-----
-
-
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-PORT=$(oc get service myboot -o jsonpath="{.spec.ports[*].port}")
-----
-
-
-
-[#sysresources-sane-limit-resource]
-[.console-input]
-[source, bash]
-----
-curl $IP:$PORT/sysresources
-----
-
-
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
- Memory: 27305 Cores: 32
-----
-
-NOTE: 보고된 CPU/메모리와 리소스 제한에 설정된 내용을 보여줍니다.
-
-
-Pod의 resource 요청/제한 내용을 확인합니다.
+먼저 Pod의 resource 요청/제한 내용을 확인합니다.
 
 [#podresources-sane-limit-resource]
 [.console-input]
@@ -736,7 +596,7 @@ oc get $PODNAME -o jsonpath='{.spec.containers[*].resources}'
 {"limits":{"cpu":"2","memory":"900Mi"},"requests":{"cpu":"250m","memory":"300Mi"}}
 ----
 
-그런 다음 `/consume` 끝점을 `curl`합니다.
+그런 다음 `/consume` 엔드포인트를 `curl`합니다.
 
 [#consume-sane-limit-resource]
 [.console-input]
@@ -745,13 +605,15 @@ oc get $PODNAME -o jsonpath='{.spec.containers[*].resources}'
 curl $IP:$PORT/consume
 ----
 
+컨테이너로부터 더이상 응답을 받을 수 없게 됩니다.
+
 [.console-output]
 [source,bash]
 ----
 curl: (52) Empty reply from server
 ----
 
-그리고 루프도 실패한다는 것을 알 수 있습니다.
+그리고 터미널2에서 진행 중이던 루프도 실패하는 것을 확인할 수 있습니다.
 
 * *Terminal#2*
 
@@ -762,8 +624,7 @@ Aloha from Spring Boot! 1120 on myboot-d78fb6d58-69kl7
 curl: (56) Recv failure: Connection reset by peer
 ----
 
-오류를 확인하려면 포드를 확인하세요.
-
+오류를 확인하려면 Pod를 확인하세요.
 
 * *Terminal#3*
 
@@ -810,9 +671,11 @@ oc describe $PODNAME
 }
 ----
 
+메모리 제한을 초과하여 강제 종료되었음을 알 수 있습니다.
+
 * *Terminal#1*
 
-`watch oc get pods`의 STATUS 열에 OOMKilled가 반영되는 것을 볼 수도 있습니다.
+`watch oc get pods`의 STATUS 열에도 OOMKilled가 반영되는 것을 볼 수도 있습니다.
 
 [.console-input]
 [source, bash]
@@ -824,8 +687,12 @@ oc describe $PODNAME
 [.console-output]
 [source,bash]
 ----
-NAME                     READY   STATUS      RESTARTS   AGE
-myboot-d78fb6d58-69kl7   0/1     OOMKilled   1          30m
+NAME                     READY   STATUS      RESTARTS       AGE
+myboot-d78fb6d58-69kl7   0/1     OOMKilled   1 (10s ago)    30m
 ----
 
-NOTE: 그리고 Spring Boot Pod가 충돌할 때마다 RESTARTS 열이 증가하는 것을 볼 수 있습니다.
+Deployment가 Pod의 개수를 일정하게 유지하기 때문에, 이미 해당 Pod가 OOMKilled로 삭제되고 새로운 Pod가 생성되었다면 STATUS 열에 `OOMKilled` 대신 `Running`이 표시될 수도 있습니다.
+이 경우, RESTARTS 열의 숫자가 증가합니다. 
+
+NOTE: 그리고 /consume 을 통해 pring Boot Pod가 충돌하여 재시작 될 때마다 RESTARTS 숫자가 증가하는 것을 볼 수 있습니다.
+

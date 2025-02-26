@@ -2,6 +2,7 @@
 ** xref:1-introduction.adoc[Lab접속방법]
 
 * I. 초급
+** xref:2-0-intro.adoc[개요]
 ** xref:2-1-kubectl.adoc[oc / kubectl]
 ** xref:2-2-pod-rs-deployment.adoc[Pod, ReplicaSet, Deployment]
 ** xref:2-3-service.adoc[Service]
@@ -10,12 +11,14 @@
 ** xref:2-6-blue-green.adoc[Blue/Green Deployments]
 
 * II. 중급
+** xref:3-0-intro.adoc[개요]
 ** xref:3-2-resources.adoc[Resources and Limits]
 ** xref:3-3-rolling-updates.adoc[Rolling updates]
 ** xref:3-4-live-ready.adoc[Liveness, Readiness & Startup]
 ** xref:3-5-configmap.adoc[ConfigMap]
 
 * III. 고급
+** xref:4-0-intro.adoc[개요]
 ** xref:4-1-secrets.adoc[Secrets]
 ** xref:4-5-jobs-cronjobs.adoc[Jobs & CronJobs]
 ** xref:4-6-daemonset.adoc[DaemonSet]

@@ -1,5 +1,15 @@
 = Rolling updates
 
+롤링 업데이트는 서비스를 중단하지 않고 애플리케이션을 새로운 버전으로 업데이트하는 기능입니다.
+전통적인 방식에서는 배포 중에 서비스가 중단될 위험이 있지만,
+Kubernetes의 롤링 업데이트 기능을 사용하면 무중단 배포가 가능합니다.
+
+✅ 롤링 업데이트 방식
+1️⃣ 새로운 버전의 애플리케이션을 포함한 새로운 파드를 생성
+2️⃣ 기존의 오래된 파드를 하나씩 종료
+3️⃣ 새로운 파드가 완전히 가동된 후, 모든 트래픽을 새로운 파드로 전환
+
+
 IMPORTANT: 이 실습은 직전의 `Resources and Limits` 실습 환경을 이어서 사용합니다.
 
 올바른 네임스페이스에 있는지 확인하세요.
@@ -106,14 +116,14 @@ NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service myboot -o jsonpath="{.spec.clusterIP}")
 ----
 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-PORT=$(kubectl get service myboot -o jsonpath="{.spec.ports[*].port}")
+PORT=$(oc get service myboot -o jsonpath="{.spec.ports[*].port}")
 ----
 
 
@@ -387,7 +397,7 @@ Events:
   Normal  ScalingReplicaSet  2m37s  deployment-controller  Scaled down replica set myboot-d78fb6d58 to 0
 ----
 
-다음 명령을 실행하여 배포와 관련된 개정을 나열할 수 있습니다.
+다음 명령을 실행하여 배포와 관련된 변경경 히스토리를 나열할 수 있습니다.
 [#rollout-history]
 [.console-input]
 [source, bash]
@@ -402,9 +412,11 @@ deployment.apps/myboot
 REVISION  CHANGE-CAUSE
 1         <none>
 2         <none>
+3         <none>
 ----
 
-다음 명령을 사용하여 이전 버전전으로 롤백할 수 있습니다.
+다음 명령을 사용하여 이전 버전으로 롤백할 수 있습니다.
+(명령어 끝에 --to-revision=N 을 붙이면 특정 revision으로 롤백할 수 있습니다.)
 
 [#describe-rollback-rolling]
 [.console-input]
@@ -413,7 +425,7 @@ REVISION  CHANGE-CAUSE
 oc rollout undo deployment/myboot
 ----
 
-그리고 애플리케이션이 Aloha로 롤백됩니다.
+Terminal#2의 출력을 통해 애플리케이션이 Aloha로 롤백 된 것을 확인할 수 있습니다.
 
 [.console-output]
 [source,bash]
@@ -421,5 +433,26 @@ oc rollout undo deployment/myboot
 Bonjour from Spring Boot! 501 on myboot-7fbc4b97df-qtkzj
 Bonjour from Spring Boot! 502 on myboot-7fbc4b97df-qtkzj
 Aloha from Spring Boot! 0 on myboot-d78fb6d58-vnlch
+----
+
+
+
+
+== Clean Up
+
+실습을 마쳤으면 생성했던 리소스를 삭제합니다. 
+
+[#clean]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete service myboot
+----
+
+[#clean]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete deployment myboot myboot-next
 ----
 

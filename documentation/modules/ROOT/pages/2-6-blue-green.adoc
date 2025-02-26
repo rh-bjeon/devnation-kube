@@ -331,13 +331,5 @@ oc delete service myboot
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc delete deployment myboot
-----
-
-
-[#clean]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc delete deployment myboot-next
+oc delete deployment myboot myboot-next
 ----
