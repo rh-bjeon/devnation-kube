@@ -5,20 +5,20 @@ Kubernetes는 컨테이너 애플리케이션의 상태를 확인하여 안정�
 
 배포된 애플리케이션이 제대로 실행되도록 하려면 애플리케이션에 따라 Liveness 프로브(Liveness Probe), Readiness 프로브 (Readiness Probe), Startup 프로브 (Readiness Probe)를 설정하는 것이 중요합니다.
 
-✅ Liveness 프로브 (Liveness Probe)
-* 애플리케이션이 정상적으로 실행 중인지 확인하고, 언제 다시 시작할지 결정하는 프로브
-* 프로브에 반복적으로 실패하면 Kubernetes가 자동으로 컨테이너를 재시작함
+* Liveness 프로브 (Liveness Probe)
+** 애플리케이션이 정상적으로 실행 중인지 확인하고, 언제 다시 시작할지 결정하는 프로브
+** 프로브에 반복적으로 실패하면 Kubernetes가 자동으로 컨테이너를 재시작함
 
-✅ Readiness 프로브 (Readiness Probe)
-* 애플리케이션이 트래픽을 받을 준비가 되었는지 확인하는 프로브
-* 애플리케이션이 초기 로딩 중이라면, 트래픽을 보내지 않도록 조정
-* 프로브에 실패하면 연결된 Service의 endpoint에서 해당 Pod의 IP 주소를 제거하여 클라이언트 트래픽이 애플리케이션에 도달하지 못하게 하고, 프로브가 다시 성공하면 다시 추가가
+* Readiness 프로브 (Readiness Probe)
+** 애플리케이션이 트래픽을 받을 준비가 되었는지 확인하는 프로브
+** 애플리케이션이 초기 로딩 중이라면, 트래픽을 보내지 않도록 조정
+** 프로브에 실패하면 연결된 Service의 endpoint에서 해당 Pod의 IP 주소를 제거하여 클라이언트 트래픽이 애플리케이션에 도달하지 못하게 하고, 프로브가 다시 성공하면 다시 추가가
 
-✅ Startup 프로브 (Readiness Probe)
-* 애플리케이션 시작이 완료되는 시점을 확인하는 프로브
-* Liveness 프로브와 달리, 한번 성공한 후에는 다시 호출되지 않음
-* 제한시간 후에도 프로브가 성공하지 못하면 restartPolicy 값에 따라 포드가 다시 시작됩
-* 시작 시간이 긴 애플리케이션에 시작 프로브를 추가하는 것이 좋음
+* Startup 프로브 (Readiness Probe)
+** 애플리케이션 시작이 완료되는 시점을 확인하는 프로브
+** Liveness 프로브와 달리, 한번 성공한 후에는 다시 호출되지 않음
+** 제한시간 후에도 프로브가 성공하지 못하면 restartPolicy 값에 따라 포드가 다시 시작됩
+** 시작 시간이 긴 애플리케이션에 시작 프로브를 추가하는 것이 좋음
 
 
 프로브를 적절하게 설정하면 다음과 같은 이점을 얻을 수 있습니다.
@@ -28,6 +28,7 @@ Kubernetes는 컨테이너 애플리케이션의 상태를 확인하여 안정�
 * Pod가 실패하는지 여부와 시기를 확인하여 모니터링
 * 새 복제본이 요청을 수신할 준비가 된 시점을 확인하여 확장
 
+== 실습
 
 그럼 실습을 진행합니다. 
 
@@ -81,8 +82,6 @@ No resources found in myspace namespace.
 ----
 
 
-
-
 이제 Liveness 및 Readiness 프로브 세트를 사용하여 애플리케이션을 배포하겠습니다.  
 아래의 배포 yaml을 살펴보면, 이전과 달리 `livenessProbe:` 와 `readinessProbe:` 섹션이 추가된 것을 확인할 수 있습니다.
 
@@ -130,10 +129,7 @@ spec:
 EOF
 ----
 
-
-
 deployment의 정보를 확인합니다.
-
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -180,7 +176,6 @@ spec:
     port: 8080
   selector:
     app: myboot
-  type: LoadBalancer
 EOF
 ----
 
@@ -220,7 +215,7 @@ NOTE: `oc project resource-%userid%` : 현재 활성화된 컨텍스트의 기�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service myboot -o jsonpath="{.spec.clusterIP}")
 ----
 
 
@@ -246,7 +241,7 @@ done
 
 * *Terminal#1에서 작업*
 
-이미지를 변경하세요.
+컨테이너 이미지를 변경합니다. 
 
 [#change-deployment-v2-live-ready]
 [.console-input]
@@ -255,8 +250,7 @@ done
 oc set image deployment/myboot myboot=quay.io/rhdevelopers/myboot:v2
 ----
 
-오류 없는 롤링 업데이트를 확인하세요.
-
+출력 메시지를 확인하여 롤링 업데이트가 오류 없이 진행되는 것을 확인합니다. 
 
 * *Terminal#2에서 확인*
 
@@ -275,6 +269,10 @@ Aloha from Spring Boot! 137 on myboot-845968c6ff-9wvt9
 Bonjour from Spring Boot! 3 on myboot-8449d5468d-m88z4
 ----
 
+Pod를 바로 교체하지 않고 Liveness와 Readiness 프로브로 상태 검사를 마친 후에 Pod를 교체하기 때문에, 
+이전 단계(Rolling updates) 실습때보다 롤링 업데이트가 더 오래 걸리는 것을 확인할 수 있습니다.
+
+
 * *Terminal#1에서 작업*
 
 서비스의 일부인 Pod를 확인하려면 엔드포인트를 살펴보세요.
@@ -286,7 +284,7 @@ Bonjour from Spring Boot! 3 on myboot-8449d5468d-m88z4
 oc get endpoints myboot -o json | jq '.subsets[].addresses[].ip'
 ----
 
-준비 상태 프로브를 통과한 Pod IP는 다음과 같습니다.
+Readiness 프로브를 통과하여 Service에 연결되어 있는는 Pod IP는 다음과 같습니다.
 
 [.console-output]
 [source.bash]
@@ -298,10 +296,9 @@ oc get endpoints myboot -o json | jq '.subsets[].addresses[].ip'
 
 
 
+== Readiness Probe
 
-=== Readiness Probe
-
-단일 Pod를 'exec'옵션으로 실행하고 준비 상태 플래그를 변경합니다.
+단일 Pod를 'exec' 옵션으로 실행하고 Readiness 상태 플래그를 변경하겠습니다.
 
 [#misbehave-app-live-ready]
 [.console-input]
@@ -323,10 +320,10 @@ myboot-845968c6ff-zsgx2   1/1     Running   0          11m
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc exec -it myboot-845968c6ff-k5lcb /bin/bash
+oc exec -it <POD이름> -- /bin/bash
 ----
 
-IMPORTANT: 명령어의 pod name(myboot-845968c6ff-k5lcbg 부분)은 실제 조회된 pod의 값으로 변경해야 합니다.
+IMPORTANT: 명령어의 <POD이름> 부분은 실제 조회된 pod 이름으로 변경해야 합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -335,11 +332,17 @@ curl localhost:8080/misbehave
 exit
 ----
 
-
 NOTE: 명령어는 해당 Pod의 readiness probe에 더이상 정상적으로 응답할 수 없도록 만듭니다.
 
+다시 Pod들의 상태를 확인합니다.
 
-해당 Pod가 준비 상태가 되지 못하는 것을 확인합니다.
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get pod
+----
+
+해당 Pod가 준비 상태로 전환되지 못하는 것을 확인합니다.
 
 [.console-output]
 [source.bash]
@@ -383,6 +386,12 @@ oc set image deployment/myboot myboot=quay.io/rhdevelopers/myboot:v3
 
 3개 복제본 모두에서 롤아웃이 완료될 때까지 기다립니다.
 
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+watch oc get pods
+----
+
 [.console-output]
 [source.bash]
 ----
@@ -392,10 +401,7 @@ myboot-56659c9d69-mdllq   1/1     Running   0          97s
 myboot-56659c9d69-zjt6q   1/1     Running   0          72s
 ----
 
- curl loop/poller에서 이미지 변경에 따른 변화를 볼 수 있습니다.:
-
-
-
+터미널2에서도 이미지 변경에 따른 변화를 볼 수 있습니다.
 
 [.console-output]
 [source.bash]
@@ -405,33 +411,18 @@ Jambo from Spring Boot! 26 on myboot-56659c9d69-zjt6q
 Jambo from Spring Boot! 71 on myboot-56659c9d69-6sglj
 ----
 
-
-[.console-input]
-[source,bash]
-----
-oc get pods
-----
-
-[.console-output]
-[source,bash]
-----
-NAME                      READY   STATUS        RESTARTS   AGE
-myboot-558b4f8678-nw762   1/1     Running       0          59s
-myboot-558b4f8678-qbrgc   1/1     Running       0          81s
-myboot-558b4f8678-z7f9n   1/1     Running       0          36s
-----
-
 이제 Pod 중 하나를 선택하고 'exec'로 실행합니다.
 
 [#shot-v3-live-ready]
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc exec -it myboot-558b4f8678-qbrgc /bin/bash
+oc exec -it <POD이름> -- /bin/bash
 ----
 
-IMPORTANT: 명령어의 pod name(myboot-558b4f8678-qbrgc 부분)은 실제 조회된 pod의 값으로 변경해야 합니다.
+IMPORTANT: 명령어의 <POD이름> 부분은 실제 조회된 pod 이름으로 변경해야 합니다.
 
+애플리케이션이 Liveness probe에 정상적인 응답을 할 수 없도록 조치하는 아래 명령어를 실행합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -440,9 +431,7 @@ curl localhost:8080/shot
 exit
 ----
 
-NOTE: 해당 명령어는 Liveness probe에 정상적인 응답을 할 수 없도록 조치합니다.
-
-그리고 livenessProbe의 실패로 인해 Pod가 다시 시작되는 것을 볼 수 있습니다:
+그러면 livenessProbe의 실패로 인해 Pod가 다시 시작되는 것을 볼 수 있습니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -455,18 +444,17 @@ watch oc get pod
 [source.bash]
 ----
 NAME                      READY   STATUS    RESTARTS   AGE
-myboot-558b4f8678-nw762   1/1     Running   0          4m7s
-myboot-558b4f8678-qbrgc   1/1     Running   1          4m29s
-myboot-558b4f8678-z7f9n   1/1     Running   0          3m44s
+myboot-7f75859d94-88lk5   0/1     Running   1 (11s ago)   10m
+myboot-7f75859d94-wmvht   1/1     Running   0             10m
+myboot-7f75859d94-xct99   1/1     Running   0             10m
 ----
-
 
 NOTE: 해당 Pod가 재시작되어 "RESTARTS" 카운트가 1로 변경된 것을 확인할 수 있습니다.
 
 
-
-
 ==== Clean up
+
+다음 프로브 실습을 위해 기존 Deployment를 삭제합니다.
 
 [#cleanup-live-ready]
 [.console-input]
@@ -477,21 +465,14 @@ oc delete deployment myboot
 
 
 
-
-
-
-
-
-
-
 === Startup Probe
 
-일부 응용 프로그램은 처음 초기화할 때 추가 시작 시간이 필요합니다.
+일부 애플리케이션은 처음 초기화할 때 추가적인 시작 시간이 필요합니다.
 
-실행 시간 동안 이상을 감지하고 긴 시작 시간을 처리하기 위해 정상적인 동작을 구성해야 하기 때문에 이 시나리오를 활성/준비 프로브에 적용하는 것은 까다로울 수 있습니다.
+이런 애플리케이션에 Liveness/Readiness 프로브를 설정하는 것은 까다로울 수 있습니다. 
+애플리케이션이 부팅이 오래 걸리는 경우, Liveness Probe가 너무 빨리 실행되면 정상적인 컨테이너를 재시작해버리리고, Readiness Probe가 너무 빨리 실행되면 아직 준비되지 않은 컨테이너가 트래픽을 받지 못할 수도 있기 때문입니다.
 
-
-예를 들어, 교착 상태에 빠질 수 있는 애플리케이션이 있고 이러한 문제를 즉시 파악하고 싶다면 짧은 응답시간의 활성 및 준비 상태 프로브가 있을 수 있습니다.
+예를 들어, 교착 상태(Deadlock)가 될 수 있는 애플리케이션이 있고 이러한 문제를 즉시 파악하려는 경우 다음과 같이 Liveness 및 Readiness 프로브의 시간을 빠듯하게 설정할 것입니다.
 
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
@@ -521,20 +502,20 @@ spec:
           httpGet:
               port: 8080
               path: /alive
-          periodSeconds: 1
-          timeoutSeconds: 1
-          failureThreshold: 1
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 2
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
-          periodSeconds: 1
+          periodSeconds: 3
 ----
 
 NOTE: 해당 probe 설정은 timeout 시간이 매우 짧은 것을 볼 수 있습니다.
 
 
- 해당 배포를 적용합니다.
+이 Deployment를 적용합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -565,24 +546,26 @@ spec:
           httpGet:
               port: 8080
               path: /alive
-          periodSeconds: 1
-          timeoutSeconds: 1
-          failureThreshold: 1
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 2
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
-          periodSeconds: 1
+          periodSeconds: 3
 EOF
 ----
 
-Pod 감시에서 볼 수 있듯이 Pod는 계속해서 다시 시작되며, 때로는 성공적으로 부팅된 후에도(kubelet이 다시 시작하도록 예약하기 때문에) 이는 SpringBoot의 시작 시간 때문입니다.
+그리고 Pod의 상태를 확인해보면, RESTART 횟수가 계속 증가하는 것이 보입니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc get pod
+watch oc get pod
 ----
+
+Pod 상태에서 볼 수 있듯이 Pod는 계속해서 다시 시작되며, 때로는 성공적으로 부팅된 후에도 (kubelet이 재시작을 예약하기 때문에) 계속 재시작 되는데, 이는 SpringBoot의 시작 시간 때문입니다.
 
 
 [.console-input]
@@ -608,36 +591,16 @@ Events:
   Warning  Unhealthy  19s (x10 over 88s)  kubelet            Readiness probe failed: Get "http://172.17.0.4:8080/health": dial tcp 172.17.0.4:8080: connect: connection refused
 ----
 
-*startup probe*는 이 문제를 해결합니다. 시작 프로브가 성공하면 나머지 프로브가 인계받습니다. 그러나 시작 프로브가 통과할 때까지는 활성 상태 프로브나 준비 프로브가 모두 실행될 수 없습니다.
 
+**startup 프로브**를 통해 이 문제를 해결할 수 있습니다. startup 프로브가 성공하면 나머지 프로브가 상태 검사를 이어받습니다. 
+그러나 startup 프로브가 통과할 때까지는 Liveness나 Readiness 프로브가 모두 실행될 수 없습니다.
 
-
-이 섹션에서 차이점을 확인할 수 있습니다.
-
-[.console-output]
-[source,yaml]
-----
-        startupProbe:
-          httpGet:
-            path: /alive
-            port: 8080
-          failureThreshold: 6
-          periodSeconds: 5
-          timeoutSeconds: 1
-----
-
-
-
-
-
-
-그런 다음 해당 배포를 적용합니다.
-
+다음 명령어를 통해 Deployment에 startup 프로브를 추가 적용합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-cat <<EOF | oc create -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -663,14 +626,14 @@ spec:
           httpGet:
               port: 8080
               path: /alive
-          periodSeconds: 1
-          timeoutSeconds: 1
-          failureThreshold: 1
+          periodSeconds: 2
+          timeoutSeconds: 2
+          failureThreshold: 2
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
-          periodSeconds: 1
+          periodSeconds: 3
         startupProbe:
           httpGet:
             path: /alive
@@ -682,9 +645,23 @@ EOF
 ----
 
 
+기존 배포에서 추가된 내용은 startupProbe 입니다.
 
-시작 프로브는 애플리케이션을 시작하기 위해 30초(`5 * 6`) 동안 기다립니다.  또한 활성 상태 및 준비 상태 확인 지연 시간이 0으로 낮아졌습니다.
+[.console-output]
+[source,yaml]
+----
+        startupProbe:
+          httpGet:
+            path: /alive
+            port: 8080
+          failureThreshold: 6
+          periodSeconds: 5
+          timeoutSeconds: 1
+----
 
+
+startup 프로브는 애플리케이션을 시작하기 위해 30초(`5 * 6`) 동안 기다리고, 이후에 Liveness나 Readiness 프로브를 이어서 진행합니다. 
+SpringBoot가 시작될 때까지 기다린 다음 상태검사를 진행하기 때문에 이제 Pod는 정상적으로 실행 상태로 전환됩니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -699,7 +676,7 @@ NAME                      READY   STATUS    RESTARTS   AGE
 myboot-579cc5cc47-2bk5p   0/1     Running   0          67s
 ----
 
-결국 컬 루프에는 Pod가 실행 중인 것으로 표시되어야 합니다.
+터미널2의 컬 루프에도 Pod가 실행 중인 것으로 표시되어야 합니다.
 
 ----
 Aloha from Spring Boot! 18 on myboot-849ccd6948-8vrfq
@@ -708,15 +685,34 @@ Aloha from Spring Boot! 20 on myboot-849ccd6948-8vrfq
 Aloha from Spring Boot! 21 on myboot-849ccd6948-8vrfq
 ----
 
+적용된 프로브들은 아래와 같이 확인할 수 있습니다.
 
-🚀 결과:
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc describe pod <POD이름름>
+----
 
-이제 애플리케이션이 완전히 기동된 후에만 트래픽을 받게 됩니다.
-이전에 발생했던 오류 메시지가 더 이상 나타나지 않습니다.
-이처럼 Kubernetes에서 적절한 Probe 설정을 하면
-무중단 배포(Rolling Update)를 더욱 안정적으로 수행할 수 있습니다.
+[.console-output]
+[source.yaml]
+----
+Limits:
+  cpu:     1
+  memory:  400Mi
+Requests:
+  cpu:        250m
+  memory:     300Mi
+Liveness:     http-get http://:8080/ delay=10s timeout=2s period=5s #success=1 #failure=3
+Readiness:    http-get http://:8080/health delay=10s timeout=1s period=3s #success=1 #failure=3
+Startup:      http-get http://:8080/alive delay=0s timeout=1s period=5s #success=1 #failure=12
+Environment:  <none>
+Mounts:
+----
+
 
 ==== Clean Up
+
+실습을 마쳤으면 생성했던 리소스를 삭제합니다. 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]

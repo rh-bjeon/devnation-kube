@@ -50,7 +50,8 @@ NOTE: 일반적으로 클러스터에서 oc(kubectl) 명령어를 사용하기 �
 
 명령어 박스 오른쪽에 있는 COPY 아이콘을 클릭하여 명령어 복사 후, 웹터미널에 붙여넣고 ENTER를 눌러 실행합니다.
 
-명령어를 붙여넣을 때, OS 환경에 따라 [CTRL+V] 또는 [CTRL+SHIFT+V] 또는 [CTRL+INSERT] 키를 눌러야 합니다.
+IMPORTANT: 명령어를 붙여넣을 때, OS 환경에 따라 [CTRL+V] 또는 [CTRL+SHIFT+V] 또는 [CTRL+INSERT] 키를 눌러야 합니다.+
+웹터미널에 출력된 내용을 복사하실 때는 마우스 우클릭 사용을 권장드립니다.
 
 image::copy.png[copy]
 <- 클릭
