@@ -1,9 +1,8 @@
 = Blue/Green
 
-https://martinfowler.com/bliki/BlueGreenDeployment.html[Here] Blue/Green 배포에 대한 설명과 이력을 확인할 수 있습니다.
+Blue/Green 배포에 대한 자세한 설명은 https://martinfowler.com/bliki/BlueGreenDeployment.html[여기]에서 확인할 수 있습니다.
 
-올바른 네임스페이스에 있는지 확인하세요.
-
+실습 진행 전에 올바른 네임스페이스에 있는지 확인하세요.
 
 [#kubectl-deploy-app]
 [.console-input]
@@ -59,7 +58,7 @@ No resources found in bg-%userid% namespace.
 [.console-input]
 [source, bash]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -115,7 +114,7 @@ watch oc get pods --show-labels
 [.console-input]
 [source, bash]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: v1
 kind: Service
 metadata:
@@ -144,14 +143,14 @@ IMPORTANT: AWS에 있는 경우 `ip` 대신 `hostname` 을 가져와야 합니�
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-IP=$(kubectl get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+IP=$(oc get service myboot -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
 ----
 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-PORT=$(kubectl get service myboot -o jsonpath="{.spec.ports[*].port}")
+PORT=$(oc get service myboot -o jsonpath="{.spec.ports[*].port}")
 ----
 
 
@@ -182,7 +181,7 @@ Aloha from Spring Boot! 2 on myboot-76b66dc545-nqx59
 [.console-input]
 [source, bash]
 ----
-cat <<EOF | kubectl apply -f -
+cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -220,7 +219,7 @@ EOF
 [.console-input]
 [source, bash]
 ----
-PODNAME=$(kubectl get pod -l app=myboot-next -o name)
+PODNAME=$(oc get pod -l app=myboot-next -o name)
 ----
 
 [#exec-v2-blue-green]

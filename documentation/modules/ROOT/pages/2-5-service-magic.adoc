@@ -311,7 +311,6 @@ sleep 0.8
 done
 ----
 
-
 [.console-output]
 [source,bash]
 ----
@@ -324,7 +323,17 @@ Python Hello on mypython-deployment-6874f84d85-2kpjl
 
 NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 Pod(app=mypython)에서 응답합니다.
 
-NOTE: 응답까지 조금 시간이 걸릴 수 있습니다.
+NOTE: 응답까지 조금 시간이 걸릴 수 있습니다. 응답이 계속 지연되는 경우에는 아래 명령어를 대신 쓰셔도 됩니다. 
+
+[#poll-endpoint]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+while true
+do curl my-service.funstuff-user1.svc.cluster.local:$PORT
+sleep 0.8
+done
+----
 
 
 * *Terminal#3에서 작업*
@@ -336,7 +345,7 @@ NOTE: 응답까지 조금 시간이 걸릴 수 있습니다.
 oc label pod -l app=mynode inservice=mypods
 ----
 
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을  Pod(app=mynode)에 설정합니다.
+NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 Pod(app=mynode)에 설정합니다.
 
 * *Terminal#1에서 확인*
 
@@ -364,7 +373,7 @@ Python Hello on mypython-deployment-6874f84d85-2kpjl
 Python Hello on mypython-deployment-6874f84d85-2kpjl
 ----
 
-NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 Pod(app=mypython)에서도 응답합니다.
+NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 또다른 Pod(app=mynode)에서도 응답합니다.
 
 
 * *Terminal#3에서 작업*
@@ -470,5 +479,5 @@ NOTE: Label이 제거된 Pod의 IP를 제외한 pods IP만 조회됩니다.
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc delete namespace funstuff-%userid%
+oc delete project funstuff-%userid%
 ----

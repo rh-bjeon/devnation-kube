@@ -324,4 +324,23 @@ Supersonic Subatomic Java with Quarkus quarkus-demo-deployment-5979886fb7-gdtnz:
 ----
 
 
+
+== Clean Up
+
+[#clean-up]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete service the-service
+----
+
+[#clean-up]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc delete deployment quarkus-demo-deployment
+----
+
+
+
 지금까지 service를 통한 클러스터 내부에서의 pod 노출과 Route/Ingress를 통한 외부로의 Service 노출을 확인하였습니다.
