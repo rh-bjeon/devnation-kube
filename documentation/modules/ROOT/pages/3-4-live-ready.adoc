@@ -371,7 +371,6 @@ done
 
 * *Terminal#1에서 작업*
 
-
 이미지를 변경하세요.
 
 [#change-deployment-v2-live-ready]
