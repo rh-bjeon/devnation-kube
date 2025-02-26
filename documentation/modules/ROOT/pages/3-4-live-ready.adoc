@@ -690,7 +690,7 @@ Aloha from Spring Boot! 21 on myboot-849ccd6948-8vrfq
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc describe pod <POD이름름>
+oc describe pod <POD이름>
 ----
 
 [.console-output]

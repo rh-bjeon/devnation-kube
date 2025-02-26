@@ -63,9 +63,8 @@ No resources found in bg-%userid% namespace.
 
 == 샘플 앱 배포
 
-샘플 애플리케이션 myboot를 배포해보겠습니다. 애플리케이션 호출 시,
-
-V1은 `Aloha from Spring Boot!` 메시지를,
+샘플 애플리케이션 myboot를 배포해보겠습니다. 애플리케이션 호출 시, 
+V1은 `Aloha from Spring Boot!` 메시지를, 
 V2는 `Bonjour from Spring Boot!` 메시지를 출력합니다. 
 
 `myboot` V1 배포:

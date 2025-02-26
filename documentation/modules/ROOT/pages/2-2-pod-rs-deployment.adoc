@@ -325,9 +325,13 @@ Deployment는 Replicaset를 통해 Pod를 배포하며, 배포할 Pod의 spec이
 이를 통해 자동 복구, 롤링 업데이트, 버전 관리가 가능해집니다.
 
 💡 Deployment의 동작 방식
+
 (1) Deployment 리소스를 생성하면 ReplicaSet(복제 세트) 객체가 자동으로 생성됨
+
 (2) ReplicaSet은 지정된 개수만큼의 Pods(파드)를 실행 및 관리
+
 (3) 모든 리소스는 Labels(레이블)과 Selectors(셀렉터)를 통해 연결됨
+
 (4) 트래픽을 특정 파드로 라우팅할 때도 Labels을 활용할 수 있음
 
 * *Terminal#2에서 수행*

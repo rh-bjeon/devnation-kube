@@ -197,7 +197,7 @@ curl localhost:8080
 Aloha from my-deployment-5dc67997c7-m7z9f
 ----
 
-NOTE: [ctrl+c]를 입력하여 pod 명령어 실행(쉘) 모드를 종료할 수 있습니다.
+NOTE: kbr:[ctrl+c]를 입력하여 pod 명령어 실행(쉘) 모드를 종료할 수 있습니다.
 
 
 
