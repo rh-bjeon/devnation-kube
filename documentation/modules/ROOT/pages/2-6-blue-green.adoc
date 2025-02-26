@@ -90,7 +90,7 @@ spec:
 EOF
 ----
 
-Scale to 2 replicas:
+Pod의 개수를 2개로 늘립니다.
 
 [#scale-v1-blue-green]
 [.console-input]
