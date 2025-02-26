@@ -4,6 +4,8 @@ Kubernetes에서는 레이블(Labels)을 이용해 특정 파드에 트래픽을
 
 Service와 Pod는 반드시 1:1로 매칭되는 것은 아니며, 특정 레이블을 가진 파드가 여러 개 있다면 그 모든 파드로 트래픽 분배할 수도 있습니다.
 
+== 사전 구성
+
 프로젝트 생성:
 
 * *Terminal#1에서 작업*
@@ -40,7 +42,8 @@ NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기�
 
 
 
-== mypython-deployment 배포
+== 여러 Pod 배포
+=== mypython-deployment 배포
 
 [#deploy-mypython]
 [.console-input]
@@ -69,7 +72,7 @@ spec:
 EOF
 ----
 
-== mygo-deployment 배포
+=== mygo-deployment 배포
 
 [#deploy-mygo]
 [.console-input]
@@ -98,7 +101,7 @@ spec:
 EOF
 ----
 
-== mynode-deployment 배포
+=== mynode-deployment 배포
 
 [#deploy-mynode]
 [.console-input]
@@ -166,6 +169,7 @@ mypython-deployment-6874f84d85-2kpjl   1/1     Running   0          3m53s   app=
 
 NOTE: 배포된 pod를 label값을 포함하여 실시간으로 확인합니다. 배포되어 있는 pod들은 inservice=mypods label 값이 없는 것을 확인할 수 있습니다.
 
+=== Service 배포포
 
 * *Terminal#1에서 작업*
 
@@ -268,6 +272,8 @@ curl: (7) Failed to connect to 35.224.233.213 port 8000: Connection refused
 
 NOTE: 현재 Service가 참조하는 label을 가진 Pod가 없기 때문에 curl은 실패합니다.
 
+== 각 Pod에 label 추가
+
 그럼 이제 Service가 Pod들을 바라볼 수 있도록 Pod에 label을 달아주도록 하겠습니다.
 
 * *Terminal#3에서 작업*
@@ -286,6 +292,8 @@ Now using project "funstuff-%userid%" on server "https://172.30.0.1:443".
 ----
 
 NOTE: `oc project funstuff-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 funstuff-%userid%로 변경합니다.
+
+=== mypython Pod에 label 추가
 
 아래 명령어를 통해 현재 Service가 참조하고 있는 label(inservice=mypods)을 Python Pod(app=mypython)에 설정합니다.
 
@@ -323,6 +331,7 @@ Python Hello on mypython-deployment-6874f84d85-2kpjl
 NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가진 Python Pod(app=mypython)에서 응답하기 시작합니다.
 NOTE: 응답까지 조금 시간이 걸릴 수 있습니다. 
 
+=== mynode Pod에 label 추가
 
 이어서 다른 Pod에도 label을 추가해봅니다.
 
@@ -365,7 +374,7 @@ Python Hello on mypython-deployment-6874f84d85-2kpjl
 
 NOTE: 현재 Service가 참조하는 label(inservice=mypods)을 가지게 된 Nodejs Pod(app=mynode)에서도 응답하기 시작합합니다.
 
-
+=== mygo Pod에 label 추가
 
 * *Terminal#3에서 작업*
 
@@ -436,6 +445,7 @@ NOTE: 위 명령어를 통해 Service가 트래픽을 전달하고 있는 pod 3�
 oc get pods -o wide
 ----
 
+=== 일부 Pod의 label 제거
 
 Service에 연결된 Pod 중 `mypython` Pod를 제거합니다.
 

@@ -76,8 +76,19 @@ No resources found in myspace namespace.
 ----
 
 
-* *Terminal#2에서 작업*
+[tabs]
+====
+{watch-terminal}::
++
+--
 
+새 프로젝트가 생성되었으면 Terminal#2에서 아래 명령어를 우선 실행해둡니다.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project volume-%userid%
+----
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -85,10 +96,12 @@ No resources found in myspace namespace.
 watch -n 1 "oc get pods -o wide \
   | awk '{print \$1 \" \" \$2 \" \" \$3 \" \" \$5 \" \" \$7}' | column -t"
 ----
-
-
 TIP: `-o wide` 옵션을 사용하면 Pod가 예약된 노드를 볼 수 있습니다. +
 줄이 너무 길어지는 것을 방지하기 위해 `awk` 와 `column` 을 사용하여 원하는 열만 가져오고 형식을 지정합니다.
+
+--
+====
+
 
 
 == EmptyDir
@@ -127,6 +140,11 @@ spec:
 
 내용을 살펴보았으니 이제 Pod를 배포해보겠습니다.
 
+[tabs]
+====
+Terminal 1::
++
+--
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
@@ -149,21 +167,32 @@ spec:
     emptyDir: {}
 EOF
 ----
+--
+====
 
+그런 다음 Terminal#2에서 다음과 같은 내용을 볼 수 있습니다.
 
-그런 다음 Watch 창에서 다음과 같은 내용을 볼 수 있습니다.
-
-* *Terminal#2에서 확인*
-
+[tabs]
+====
+{watch-terminal}::
++
+--
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
 ----
 NAME         READY  STATUS             AGE  NODE
 myboot-demo  0/1    ContainerCreating  9s   devnation
 ----
+--
+====
 
 Pod가 실행 상태가 되면 컨테이너에 접속합니니다.
 
+[tabs]
+====
+Terminal 1::
++
+--
 [.console-input]
 [source,bash]
 ----
@@ -207,7 +236,8 @@ ls /tmp/demo
 ----
 greeting.txt
 ----
-
+--
+====
 
 ==== EmptyDir 데이터의 지속 여부 확인
 
@@ -376,10 +406,6 @@ EOF
 ----
 
 
-
-* *Terminal#2에서 확인*
-
-
 [tabs]
 ====
 {watch-terminal}::
@@ -392,21 +418,24 @@ NAME          READY   STATUS    RESTARTS   AGE
 myboot-demo   #2/2#    Running   0          4s
 ----
 
-[.console-output]
-[source,bash,subs="+macros,+attributes,+quotes"]
-----
-NAME          READY   STATUS    RESTARTS   AGE
-myboot-demo   #2/2#    Running   0          4s
-----
-
 준비 상태가 '2/2' 인 것을 확인하세요. 이는 Pod 정의에 있는 2개의 컨테이너를 나타냅니다.
 
-먼저 Pod의 *두 번째* 컨테이너로 실행하고 마운트 지점에서 감시를 시작하겠습니다.  이를 위해 Pod의 다른 컨테이너에 또 다른 터미널(*{file-watch-terminal}*) `exec`를 열어 `cat` 명령을 실행합니다.
+--
+====
 
+먼저 Pod의 *두 번째* 컨테이너에 접속하여 마운트 지점을 감시하겠습니다. 
+이를 위해 또 다른 터미널(*{file-watch-terminal}*)을 열어 Pod의 컨테이너2에 `exec` 로 접속하고 `cat` 명령을 실행합니다.
+
+
+[tabs]
+====
+{file-watch-terminal}::
++
+--
 [.console-input]
 [source,bash]
 ----
-oc exec -it myboot-demo -c myboot-demo-2 -- bash 
+kubectl exec -it myboot-demo -c myboot-demo-2 -- bash 
 ----
 
 그런 다음 Pod의 `myboot-demo-2` 컨테이너 내부에서 다음 명령을 실행합니다.
@@ -426,30 +455,20 @@ total 0
 cat: /tmp/demo/greeting.txt: No such file or directory
 ----
 
- *첫 번째* 컨테이너에 액세스하여 *두 번째* 컨테이너가 볼 수 있는 파일을 생성할 수 있는지 살펴보겠습니다.
+--
+====
 
-* *Terminal#3에서 작업*
+이어서 *첫 번째* 컨테이너에 접속하여 *두 번째* 컨테이너가 볼 수 있는 파일을 생성할 수 있는지 살펴보겠습니다.
 
-[#kubectl-deploy-app]
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc project volume-%userid%
-----
-
-[.console-output]
-[source,bash,subs="+macros,+attributes"]
-----
-Now using project "volume-%userid%" on server "https://172.30.0.1:443".
-----
-
-NOTE: `oc project volume-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 volume-%userid%로 변경합니다.
-
-
+[tabs]
+====
+Terminal 1::
++
+--
 [.console-input]
 [source,bash]
 ----
-oc exec -ti myboot-demo -c myboot-demo-1 -- /bin/bash
+kubectl exec -ti myboot-demo -c myboot-demo-1 -- /bin/bash
 ----
 
 그리고 `/tmp/demo` 디렉토리에 일부 콘텐츠를 생성합니다.
@@ -460,7 +479,7 @@ oc exec -ti myboot-demo -c myboot-demo-1 -- /bin/bash
 curl localhost:8080/appendgreetingfile
 ----
 
-그런 다음 파일이 존재하고 해당 내용이 무엇인지 표시합니다.
+그런 다음 파일이 존재하는지, 해당 내용이 무엇인지 표시합니다.
 
 [.console-input]
 [source,bash]
@@ -476,10 +495,31 @@ total 4
 Jambo
 ----
 
+--
+====
+
+한편 Terminal#3에는 다음과 같은 내용이 표시됩니다.
 
 
-한편 Terminal#1에는 다음과 같은 내용이 표시됩니다.
+[tabs]
+====
+{file-watch-terminal}::
++
+--
+[#kubectl-deploy-app]
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc project volume-%userid%
+----
 
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+Now using project "volume-%userid%" on server "https://172.30.0.1:443".
+----
+
+NOTE: `oc project volume-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 volume-%userid%로 변경합니다.
 
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
@@ -489,7 +529,7 @@ total 4
 Jambo
 ----
 
-[CTRL+c]를 눌러 Watch를 종료한 다음 'exec'에서 Pod로 종료합니다.
+kbd:[CTRL+c]를 눌러 Watch를 종료한 다음, exit을 입력하여 `exec`를 종료합니다.
 
 [.console-input]
 [source,bash]

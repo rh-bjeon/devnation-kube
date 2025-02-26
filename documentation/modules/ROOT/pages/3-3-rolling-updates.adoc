@@ -5,10 +5,15 @@
 Kubernetes의 롤링 업데이트 기능을 사용하면 무중단 배포가 가능합니다.
 
 ✅ 롤링 업데이트 방식
+
 1️⃣ 새로운 버전의 애플리케이션을 포함한 새로운 파드를 생성
+
 2️⃣ 기존의 오래된 파드를 하나씩 종료
+
 3️⃣ 새로운 파드가 완전히 가동된 후, 모든 트래픽을 새로운 파드로 전환
 
+
+== 사전 구성
 
 IMPORTANT: 이 실습은 직전의 `Resources and Limits` 실습 환경을 이어서 사용합니다.
 
@@ -397,7 +402,7 @@ Events:
   Normal  ScalingReplicaSet  2m37s  deployment-controller  Scaled down replica set myboot-d78fb6d58 to 0
 ----
 
-다음 명령을 실행하여 배포와 관련된 변경경 히스토리를 나열할 수 있습니다.
+다음 명령을 실행하여 배포와 관련된 변경 히스토리를 나열할 수 있습니다.
 [#rollout-history]
 [.console-input]
 [source, bash]

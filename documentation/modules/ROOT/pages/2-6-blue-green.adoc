@@ -5,6 +5,9 @@ Kubernetes에서는 레이블(Labels)을 이용해 특정 파드에 트래픽을
 
 Blue/Green 배포에 대한 자세한 설명은 https://martinfowler.com/bliki/BlueGreenDeployment.html[여기]에서 확인할 수 있습니다.
 
+
+== 사전 구성
+
 이번 실습에서는 2가지 버전의 애플리케이션을 동시에 실행되도록 배포하고, 트래픽을 새 버전의 애플리케이션으로 전환해보겠습니다.
 
 실습 진행 전에 올바른 프로젝트에 있는지 확인하세요.
