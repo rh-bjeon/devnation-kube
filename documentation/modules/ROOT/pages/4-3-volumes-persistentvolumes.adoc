@@ -434,7 +434,7 @@ myboot-demo   #2/2#    Running   0          4s
 [.console-input]
 [source,bash]
 ----
-kubectl exec -it myboot-demo -c myboot-demo-2 -- bash 
+oc exec -it myboot-demo -c myboot-demo-2 -- bash 
 ----
 
 그런 다음 Pod의 `myboot-demo-2` 컨테이너 내부에서 다음 명령을 실행합니다.
@@ -467,7 +467,7 @@ Terminal#1::
 [.console-input]
 [source,bash]
 ----
-kubectl exec -ti myboot-demo -c myboot-demo-1 -- /bin/bash
+oc exec -ti myboot-demo -c myboot-demo-1 -- /bin/bash
 ----
 
 그리고 `/tmp/demo` 디렉토리에 일부 콘텐츠를 생성합니다.
@@ -528,7 +528,9 @@ total 4
 Jambo
 ----
 
-kbd:[CTRL+c]를 눌러 Watch를 종료한 다음, exit을 입력하여 `exec` 를 종료합니다.
+첫 번째 컨테이너가 생성한 파일을 두 번째 컨테이너에서도 읽을 수 있는 것을 확인할 수 있습니다. 
+
+확인을 마쳤으면 kbd:[CTRL+c]를 눌러 Watch를 종료한 다음, exit을 입력하여 `exec` 를 종료합니다.
 
 [.console-input]
 [source,bash]
@@ -558,30 +560,13 @@ Volumes:
 
 === Clean Up
 
-`exec` 명령을 종료하세요.
-
-[.console-input]
-[source,bash]
-----
-exit
-----
-
-
-이제 Pod를 삭제하세요.
-
-[.console-input]
-[source,bash]
-----
-oc delete pod myboot-demo
-----
+include::partial$terminal-cleanup.adoc[tags=**;!*;term3;term-exec]
 
 
 
+== HostPath
 
-=== HostPath
-
-IMPORTANT: 
-*hostPath 볼륨 사용 제한* +
+IMPORTANT: *hostPath 볼륨 사용 제한* +
 OpenShift는 클러스터 노드의 파일 시스템 경로를 컨테이너에 직접 마운트하는 hostPath 볼륨의 사용을 기본적으로 금지합니다. 이는 보안상 중요한 이유 때문입니다.+
 
 *SCC(Secure Context Constraints)* +
@@ -663,6 +648,8 @@ Volumes:
     HostPathType:
 ----
 
+:mount-dir: /mnt/data
+include::partial$watch-node-directory.adoc[]
 
 '호스트' 또는 '노드'의 디렉터리를 볼 수 있는 터미널을 열어 보겠습니다.
 
@@ -689,10 +676,9 @@ myboot-demo   1/1     Running   0          4m19s   10.131.0.29   ip-10-0-27-23.u
 ----
 oc debug node/ip-10-0-27-23.us-east-2.compute.internal
 chroot /host
----
+----
 
 NOTE: oc debug node 명령어는 node를 디버깅하기 위한 pod를 생성하고 노드에 접속합니다.
-
 
 이제 노드에 있으므로 Pod가 `/tmp/demo`로 마운트한 `{mount-dir}` 디렉터리를 살펴보겠습니다.
 
@@ -740,7 +726,7 @@ NOTE: `oc project volume-%userid%` : 현재 활성화된 컨텍스트의 기본 
 [.console-input]
 [source,bash]
 ----
-kubectl exec -ti myboot-demo -- /bin/bash
+oc exec -ti myboot-demo -- /bin/bash
 ----
 
 그런 다음 Pod 내에서 '/tmp/demo' 디렉터리에 일부 콘텐츠를 생성합니다.
@@ -790,30 +776,22 @@ spec:
 이전 스니펫에서 알아두셔야 할 점은 애플리케이션(예: 컨테이너, 프로브, 포트 등)의 항목과 _dev_ 측면에 더 많은 항목을 클라우드와 더 관련된 항목(예: 물리적)을 혼합하고 있다는 것입니다. +
 이러한 개념의 혼합을 피하기 위해 Kubernetes는 일부 추상화 계층을 제공하므로 개발자는 데이터를 저장할 공간(_지속적 볼륨 요청_)만 요청하면 운영 팀은 물리적 스토리지 구성을 제공합니다.
 
-==== Clean Up
+=== Clean Up
 
-
-[.console-input]
-[source,bash]
-----
-oc delete pod myboot-demo 
----
-
-
+include::partial$terminal-cleanup.adoc[tags=**;!*;term-exec]
 
 
 
 == Persistent Volume & Persistent Volume Claim
 
-'영구 볼륨'(_PV_)은 관리자가 생성하거나 Pod와 독립적으로 '스토리지 클래스'를 동적으로 사용하여 생성되는 Kubernetes 리소스입니다.
-이는 스토리지 구현에 대한 세부 정보를 캡처하며 NFS, Ceph, iSCSI 또는 클라우드 제공업체별 스토리지 시스템일 수 있습니다.
+'영구 볼륨'(_PV_)은 관리자가 직접 개별로 생성하거나 Pod와 독립적으로 '스토리지 클래스'를 사용하여 동적으로 생성되는 Kubernetes 리소스입니다.
+이런 영구 볼륨은 NFS, Ceph, iSCSI 또는 클라우드 제공업체별 스토리지 시스템에 기반을 두고 있을 수 있습니다.
 
-'PertantVolumeClaim'(_PVC_)은 사용자의 스토리지 요청입니다.
-특정 볼륨 크기 또는 액세스 모드 등을 요청할 수 있습니다.
+'영구 볼륨 클레임'(_PertantVolumeClaim, PVC_)은 유저의 스토리지 요청입니다.
+특정 볼륨 크기 또는 액세스 모드 등을 설정하여 요청할 수 있습니다.
 
 
 === Persistent volume/claim with hostPath
-
 
 `hostPath` 전략을 사용하되 이를 볼륨으로 직접 구성하지 않고 영구 볼륨 및 영구 볼륨 클레임을 사용하겠습니다. 
 
