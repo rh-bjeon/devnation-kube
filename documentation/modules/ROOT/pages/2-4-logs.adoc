@@ -1,10 +1,11 @@
-= OpenShift Logging
+= Logs
 
 Kubernetes에서 실행 중인 애플리케이션의 로그를 조회하고, 문제를 진단하는 방법을 알아보겠습니다.
 
 OpenShift Logging은 클러스터의 모든 Pod 및 노드에서 로그 메시지를 수집하고 집계합니다. 사용자와 관리자는 OpenShift 웹 콘솔 또는 CLI를 사용하여 로그 항목을 검색하고 참조할 수 있습니다.
 
-= Logs
+
+== 사전 구성 
 
 애플리케이션(배포)이 실행 중인지 확인하세요.:
 
@@ -39,6 +40,7 @@ Now using project "log-%userid%" on server "https://172.30.0.1:443".
 
 NOTE: `oc project log-%userid%` : 현재 활성화된 컨텍스트의 기본 프로젝트를 log-%userid%로 변경합니다.
 
+== 앱 배포
 
 [#create-deployment]
 [.console-input]

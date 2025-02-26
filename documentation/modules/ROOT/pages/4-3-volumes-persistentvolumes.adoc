@@ -566,18 +566,18 @@ include::partial$terminal-cleanup.adoc[tags=**;!*;term3;term-exec]
 
 == HostPath
 
-IMPORTANT: *hostPath 볼륨 사용 제한* +
-OpenShift는 클러스터 노드의 파일 시스템 경로를 컨테이너에 직접 마운트하는 hostPath 볼륨의 사용을 기본적으로 금지합니다. 이는 보안상 중요한 이유 때문입니다.+
+IMPORTANT: *`HostPath` 부분은 실습을 하지 마시고 검토만 하세요* +
+이 실습의 user 계정은 admin 권한이 없기 때문에, 내용을 읽어보시고 실습은 다음 파트인 Persistent Volume & Persistent Volume Claim에서 계속합니다.
+
+*hostPath 볼륨 사용 제한* +
+OpenShift는 클러스터 노드의 파일 시스템 경로를 컨테이너에 직접 마운트하는 hostPath 볼륨의 사용을 기본적으로 금지합니다. 이는 보안상 중요한 이유 때문입니다.
 
 *SCC(Secure Context Constraints)* +
 OpenShift는 Pod가 특정 보안 컨텍스트 제약 조건(SCC)에 맞아야 실행을 허용합니다. +
-기본적으로 사용자는 restricted SCC가 할당되어 있고, 이는 hostPath 볼륨 사용을 허용하지 않습니다.+
+기본적으로 사용자는 restricted SCC가 할당되어 있고, 이는 hostPath 볼륨 사용을 허용하지 않습니다.
 
-*이 실습의 user 계정은 admin 권한이 없기 때문에, `HostPath` 부분은 실습하지 않고 검토만 하는 것을 권장합니다.*
-*내용을 읽어보시고 실습은 다음 파트인 Persistent Volume & Persistent Volume Claim에서 계속합니다.*
 
 `hostPath` 볼륨은 노드 파일 시스템의 파일이나 디렉터리를 Pod에 마운트합니다. 
-
 
 [source, yaml]
 ----
@@ -680,7 +680,7 @@ chroot /host
 
 NOTE: oc debug node 명령어는 node를 디버깅하기 위한 pod를 생성하고 노드에 접속합니다.
 
-이제 노드에 있으므로 Pod가 `/tmp/demo`로 마운트한 `{mount-dir}` 디렉터리를 살펴보겠습니다.
+이제 노드에 있으므로 Pod가 `/tmp/demo` 로 마운트한 `{mount-dir}` 디렉터리를 살펴보겠습니다.
 
 [.console-input]
 [source,bash]
@@ -754,7 +754,7 @@ Jambo
 ----
 
 
-이제 Pod 내부 `/tmp/demo`에 저장된 콘텐츠는 호스트 경로 `/mnt/data`에 저장되므로 Pod가 죽어도 콘텐츠가 손실되지 않습니다. +
+이제 Pod 내부 `/tmp/demo` 에 저장된 콘텐츠는 호스트 경로 `/mnt/data` 에 저장되므로 Pod가 죽어도 콘텐츠가 손실되지 않습니다. +
 하지만 이렇게 해도 모든 문제가 해결되지는 않을 수 있습니다.  +
 Pod가 다운되고 다른 노드에서 다시 예약되면 데이터는 이 다른 노드에 없게 됩니다. 이 경우 Amazon EBS 볼륨에 대한 또 다른 예를 살펴보겠습니다. 
 
@@ -782,6 +782,8 @@ include::partial$terminal-cleanup.adoc[tags=**;!*;term-exec]
 
 
 
+
+
 == Persistent Volume & Persistent Volume Claim
 
 '영구 볼륨'(_PV_)은 관리자가 직접 개별로 생성하거나 Pod와 독립적으로 '스토리지 클래스'를 사용하여 동적으로 생성되는 Kubernetes 리소스입니다.
@@ -793,11 +795,10 @@ include::partial$terminal-cleanup.adoc[tags=**;!*;term-exec]
 
 === Persistent volume/claim with hostPath
 
-`hostPath` 전략을 사용하되 이를 볼륨으로 직접 구성하지 않고 영구 볼륨 및 영구 볼륨 클레임을 사용하겠습니다. 
+`hostPath` 전략을 사용하되 이를 볼륨으로 직접 구성하지 않고 영구 볼륨(PV) 및 영구 볼륨 클레임(PVC)을 사용하겠습니다. 
 
 
 [source, yaml]
-.{quick-open-file}
 ----
 kind: PersistentVolume
 apiVersion: v1
@@ -815,7 +816,9 @@ spec:
     path: "/mnt/persistent-volume"
 ----
 
-이제 '볼륨' 정보는 더 이상 Pod에 있지 않고 _영구 볼륨_ 개체에 있습니다.
+위 내용을 확인해보면, 이제 '볼륨' 에 대한 정보는 _영구 볼륨_ 개체에 있으며, 더 이상 Pod에 작성할 필요가 없습니다. 
+
+아래 명령어를 통해 영구 볼륨(PV)을 생성합니다.
 
 [.console-input]
 [source,bash]
@@ -851,18 +854,23 @@ NAME                                       CAPACITY   ACCESS MODES   RECLAIM POL
 my-persistent-volume-%userid%                       100Mi      RWO            Retain           Available                                                   pv-demo                 5s
 ----
 
+:mount-dir: /mnt/persistent-volume
 
+볼륨이 설정되면 Terminal#3 을 업데이트하여 볼륨의 새 위치인 `{mount-dir}` 을 살펴보겠습니다.
 
+[tabs]
+====
+{file-watch-terminal}::
++
+--
 
+kbd:[CTRL+c]를 눌러 기존 watch 명령을 종료합니다.
 
+그리고 새로운 watch 명령을 실행합니다.
 
-볼륨이 설정되면 파일 감시 터미널을 업데이트하여 볼륨의 새 위치를 살펴보겠습니다.
-
-
-
-
-다음 새 watch를 시작해 보세요.
-
+include::partial$file-watch-command.adoc[]
+--
+====
 
 * *Terminal#2에서 수행*
 
@@ -932,8 +940,6 @@ cat: /mnt/data/greeting.txt: No such file or directory
 NOTE: 아직 파일이 확인되지 않습니다.
 
 
-
-
 그런 다음 개발 측에서는 _PV_에서 필요한 것을 요청해야 합니다.
 다음 예에서는 *10Mi* 공간을 요청합니다. 
 
@@ -985,8 +991,6 @@ oc get pvc -w
 NAME                 STATUS   VOLUME                 CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 myboot-volumeclaim-%userid%   Bound    my-persistent-volume   100Mi      RWO            pv-demo        3s
 ----
-
-
 
 
 
