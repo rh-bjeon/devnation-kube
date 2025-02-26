@@ -71,66 +71,61 @@ include::partial$watching-pods-with-nodes.adoc[]
 == Taints
 
 Taint는 Kubernetes 노드에 적용되어, 특정 Pod를 스케줄링하지 않거나 피하도록 스케줄러에 신호를 보냅니다. 
-
 Toleration은 Pod 정의에 적용되고 Taint에 예외를 제공합니다. 
 
 현재 노드의 상태에 대해 먼저 확인해 보겠습니다. +
 
+
+taint 실습용으로 개별 유저에게 할당된 노드의 taint를 확인합니다. 
+
+
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc describe nodes | egrep "Name:|Taints:"
+oc describe nodes -l devnation=%userid% | egrep "Name:|Taints:"
 ----
 
 [.console-output]
 [source,bash]
 ----
-Name:               ip-10-0-136-107.eu-central-1.compute.internal
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Name:               ip-10-0-140-186.eu-central-1.compute.internal
-Taints:             <none>
-Name:               ip-10-0-141-128.eu-central-1.compute.internal
-Taints:             <none>
-Name:               ip-10-0-146-109.eu-central-1.compute.internal
-Taints:             <none>
-Name:               ip-10-0-150-226.eu-central-1.compute.internal
+Name:               ip-10-0-9-136.us-west-2.compute.internal
 Taints:             <none>
 ----
 
-NOTE: 이 경우 '마스터' 노드에는 애플리케이션 Pod가 예약되는 것을 차단하는 taint가 포함되어 있습니다.
-
-
-모든 노드에 taint를 추가해 보겠습니다.
+해당 노드에 taint를 추가해 보겠습니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-kubectl taint nodes --all=true color=blue:NoSchedule
+oc adm taint node -l devnation=%userid% color=blue:NoSchedule
 ----
 
 [.console-output]
 [source,bash]
 ----
-node/ip-10-0-136-107.eu-central-1.compute.internal tainted
-node/ip-10-0-140-186.eu-central-1.compute.internal tainted
-node/ip-10-0-141-128.eu-central-1.compute.internal tainted
-node/ip-10-0-146-109.eu-central-1.compute.internal tainted
-node/ip-10-0-150-226.eu-central-1.compute.internal tainted
-node/ip-10-0-155-122.eu-central-1.compute.internal tainted
-node/ip-10-0-162-206.eu-central-1.compute.internal tainted
-node/ip-10-0-168-102.eu-central-1.compute.internal tainted
-node/ip-10-0-175-64.eu-central-1.compute.internal tainted
+node/ip-10-0-9-136.us-west-2.compute.internal tainted
 ----
 
-color=blue는 단순히 오염을 식별하기 위한 키=값 쌍이고 NoSchedule은 오염을 "허용"할 수 없는 Pod에 대한 특정 효과입니다.  즉, Pod가 "color=blue"를 허용하지 않으면 효과는 "NoSchedule"이 됩니다.
+다시 taint 상태를 확인해보면 아래와 같이 반영되었음을 확인할 수 있습니다. 
 
+[.console-output]
+[source,bash]
+----
+Name:               ip-10-0-9-136.us-west-2.compute.internal
+Taints:             color=blue:NoSchedule
+----
 
-그럼 이것을 시험해 봅시다.  기본 터미널에서 특별한 허용 사항이 없는 새 Pod를 배포합니다.
+color=blue는 단순히 Taint를 구분하기 위한 키=값 쌍이고, NoSchedule은 Taint을 "허용(toleration)" 할 수 없는 Pod에 적용할 특정 효과입니다. 
+즉, Pod가 "color=blue" Taint를 허용(toleration)하지 않으면 "NoSchedule" 효과를 받습니다.
 
+그럼 효과를 확인해보겠습니다. 
+기본 터미널에서 특별한 toleration이 없는 새 Pod를 해당 노드(devnation=%userid% 레이블을 가진 노드)에 배포합니다.
 
-
-* *Terminal#1*
-
+[tabs]
+====
+Terminal 1::
++
+--
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
@@ -151,6 +146,8 @@ spec:
       labels:
         app: myboot
     spec:
+      nodeSelector:
+        devnation: %userid%
       containers:
       - name: myboot
         image: quay.io/rhdevelopers/myboot:v1
@@ -159,30 +156,43 @@ spec:
 EOF
 ----
 
+--
+====
 
 Terminal#2의 출력이 변경되는 것을 볼 수 있습니다.
 
+[tabs]
+====
+{watch-terminal}::
++
+--
 [.console-output]
 [source,bash,subs="+quotes"]
 ----
 NAME                      READY   STATUS    AGE     NODE
 myboot-7cbfbd9b89-hqx6h   0/1     #Pending#   4m12s   devnation
 ----
+--
+====
 
-
-사용 가능한 예약 가능한 노드가 없으므로 Pod는 'Pending' 상태로 유지됩니다.
+`devnation=%userid%` 레이블을 가진 노드에 Pod를 배포해야 하는데, 해당 노드는 `color=blue:NoSchedule` Taint가 적용되어 있어 Pod를 예약할 수 없습니다.
+사용 가능한 예약 가능한 노드가 없으므로 Pod는 'Pending' 상태를 유지합니다.
 
 다음을 입력하면 이에 대한 더 많은 통찰력을 얻을 수 있습니다.
 
 
-
+[tabs]
+====
+--
+Terminal#1::
++
+--
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
 oc describe pod #<.>
 ----
-<.> 이 경우 Pod는 하나만 있습니다.  구체적으로 지정하려면 Pod 이름을 추가할 수 있습니다(예: `myboot-7f889dd6d-n5z55`))
-
+<.> 이 경우 Pod는 하나만 있습니다. 구체적으로 지정하려면 Pod 이름을 추가할 수 있습니다(예: `myboot-7f889dd6d-n5z55`))
 
 [.console-output]
 [source,bash,subs="+quotes"]
@@ -206,42 +216,16 @@ Events:
   Warning  FailedScheduling  <unknown>  default-scheduler  #0/9 nodes are available: 9 node(s) had taints that the pod didn't tolerate.#
 ----
 
+배포 대상 노드가 Pod가 허용(toleration)할 수 없는 오염(Taint)을 가지고 있어 스케줄링할 수 없다고 표시되어 있습니다. 
 
-클러스터의 노드 목록을 가져오겠습니다.
-
-[.console-input]
-[source,bash,subs="+macros,+attributes"]
-----
-oc get nodes
-----
-
-[.console-output]
-[source,bash]
-----
-NAME                                            STATUS   ROLES    AGE   VERSION
-ip-10-0-136-107.eu-central-1.compute.internal   Ready    master   20h   v1.16.2
-ip-10-0-140-186.eu-central-1.compute.internal   Ready    worker   20h   v1.16.2
-ip-10-0-141-128.eu-central-1.compute.internal   Ready    worker   18h   v1.16.2
-ip-10-0-146-109.eu-central-1.compute.internal   Ready    worker   18h   v1.16.2
-ip-10-0-150-226.eu-central-1.compute.internal   Ready    worker   20h   v1.16.2
-ip-10-0-155-122.eu-central-1.compute.internal   Ready    master   20h   v1.16.2
-ip-10-0-162-206.eu-central-1.compute.internal   Ready    worker   20h   v1.16.2
-ip-10-0-168-102.eu-central-1.compute.internal   Ready    master   20h   v1.16.2
-ip-10-0-175-64.eu-central-1.compute.internal    Ready    worker   18h   v1.16.2
-----
-
-그리고 오염을 *제거*할 노드 하나를 선택합니다.
+다시 노드의 Taint를 제거합니다. 
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-kubectl taint node ip-10-0-175-64.eu-central-1.compute.internal color:NoSchedule- 
+oc adm taint node -l devnation=%userid% color=blue:NoSchedule-
 ----
-
-IMPORTANT : nodename은 실제 조회된 nodenamewnd 하나를 입력합니다.
-
-NOTE:  여기에 `-`를 추가하는 것은 문제의 오염을 제거한다는 의미입니다(`NoSchedule` 작업과 함께 `color`).
-
+NOTE: 여기에 `-`를 추가하는 것은 문제의 taint을 제거한다는 의미입니다(`NoSchedule` 효과를 가진 `color` taint).
 
 [.console-output]
 [source,bash,subs="+attributes"]
@@ -249,62 +233,61 @@ NOTE:  여기에 `-`를 추가하는 것은 문제의 오염을 제거한다는 
 node/{chosen-node}  untainted
 ----
 
+--
+====
 
 
-이제 Terminal#2에서 새로 포함되지 않은 노드에 예약된 Pod가 표시됩니다.
+이제 Terminal#2를 보면 taint가 해제되면서 Pod가 예약되는 것이 보입니다.
 
+
+[tabs]
+====
+{watch-terminal}::
++
+--
 [.console-output]
 [source,bash,subs="+quotes"]
 ----
 NAME                      READY   STATUS              AGE       NODE
-myboot-7cbfbd9b89-hqx6h   0/1     #ContainerCreating#   20m   ip-10-0-175-64.eu-central-1.compute.internal
+myboot-7cbfbd9b89-hqx6h   0/1     #ContainerCreating#   20m   #devnation-m02#
 ----
-
+--
+====
 
 마지막으로 모든 노드의 taint 상태를 간단히 살펴보겠습니다.
 
+[tabs]
+====
+Terminal 1::
++
+--
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc describe nodes | egrep "Name:|Taints:"
+oc describe nodes -l devnation=%userid% | egrep "Name:|Taints:"
 ----
 
 [.console-output]
 [source,bash]
 ----
-Name:               ip-10-0-136-107.eu-central-1.compute.internal
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Name:               ip-10-0-140-186.eu-central-1.compute.internal
+Name:               ip-10-0-9-136.us-west-2.compute.internal
 Taints:             <none>
-Name:               ip-10-0-141-128.eu-central-1.compute.internal
-Taints:             color=blue:NoSchedule
-Name:               ip-10-0-146-109.eu-central-1.compute.internal
-Taints:             color=blue:NoSchedule
 ----
 
+--
+====
 
 === Restore Taint
 
-노드(또는 이 경우 모든 노드)에 taint를 다시 추가합니다.
-
+노드에 taint를 다시 추가합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-kubectl taint nodes --all=true color=blue:NoSchedule --overwrite
+oc adm taint node -l devnation=%userid% color=blue:NoSchedule
 ----
 
-[TIP]
-====
-모든 노드에 taint를 설정하는 것은 약간 엉성합니다.  원한다면 제거된 노드에만 taint를 설정하여 동일한 효과를 좀 더 우아하게 얻을 수 있습니다.  예를 들어,
-
-----
-kubectl taint node ip-10-0-140-186.eu-central-1.compute.internal color=blue:NoSchedule
-----
-====
-
-taint가 변경되었음에도 불구하고 Pod가 계속 실행되고 있는지 살펴보세요. (이는 Pod 수명 주기에서 일회성 활동으로 예약하기 때문입니다.)
-
+taint가 변경되었음에도 불구하고 Pod가 계속 실행되고 있는지 살펴봅니다. (이는 Pod의 라이프사이클에서 스케줄링이 일회성 활동이기 때문입니다)
 
 [.console-output]
 [source,bash,subs="+macros,+attributes,+quotes"]
@@ -317,19 +300,21 @@ myboot-7cbfbd9b89-bzhxw   1/1     #Running#   18m   ip-10-0-175-64.eu-central-1.
 
 === Clean Up
 
-myboot 배포를 취소하고 노드에 taint를 다시 추가합니다.
+myboot Deployment를 삭제합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-kubectl delete deployment 
+oc delete deployment 
 ----
 
 
 
 == Tolerations
 
-오염된 노드에 예약할 수 있도록 톨러레이션이 포함된 Pod를 생성해 보겠습니다.
+오염(tainted)된 노드에 예약할 수 있도록 Toleration이 포함된 Pod를 생성해 보겠습니다.
+
+Deployment 스펙에 추가할 내용을 다음과 같습니다.
 
 [source, yaml]
 ----
@@ -344,8 +329,7 @@ spec:
     image: quay.io/rhdevelopers/myboot:v1
 ----
 
-
-
+다음 명령어를 통해 Toleration이 포함된 Deployment를 배포합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -367,6 +351,8 @@ spec:
       labels:
         app: myboot
     spec:
+      nodeSelector:
+        devnation: %userid%
       tolerations:
       - key: "color"
         operator: "Equal"
@@ -380,10 +366,7 @@ spec:
 EOF
 ----
 
-
-그런 다음 얼마 지나지 않아 감시 창에서 Pod가 예약되고 실행 상태로 진행되는 것을 확인해야 합니다.
-
-
+Pod 상태를 확인하면 얼마 지나지 않아 예약되고 Running 상태로 변하는 것이 보입니다. 
 
 [.console-output]
 [source,bash,subs="+quotes"]
@@ -392,8 +375,7 @@ NAME                      READY   STATUS    AGE     NODE
 myboot-84b457458b-mbf9r   1/1     #Running#   3m18s   devnation-m02
 ----
 
-
-이제 모든 노드에 오염이 포함되어 있더라도 color=blue 오염에 대한 허용 오차를 정의한 대로 Pod가 예약되고 실행됩니다.
+이제 노드에 taint가 설정되어 있더라도, `color=blue` taint에 대한 toleration을 설정되어있기 때문에 Pod가 아무런 문제 없이 예약되고 실행됩니다.
 
 === Clean Up
 
@@ -407,22 +389,20 @@ oc delete deployment myboot
 
 == `NoExecution` Taint
 
-지금까지 'NoSchedule' 오염 효과를 살펴보았습니다. 이는 새로 생성된 Pod가 우선적인 허용 범위를 갖지 않는 한 그곳에서 예약되지 않는다는 것을 의미합니다. 그러나 이미 실행 중이거나 예약된 Pod가 있는 노드에 이 오염을 추가하면,  이 오염은 그들을 제거하지 못할 것입니다.
+지금까지 'NoSchedule' taint 효과를 살펴보았습니다. 
 
+이는 새로 생성된 Pod가 우선적인 toleration을 갖지 않는 한, Pod가 그곳에 예약되지 않는다는 것을 의미합니다. 
+그러나 이미 실행 중이거나 예약된 Pod가 있는 노드에는 'NoSchedule' taint을 추가해도 해당 Pod들을 제거할 수 없습니다. 
 
-NoExecution 효과를 사용하여 이를 변경해 보겠습니다.  우선 이전 taint를 모두 제거해 보겠습니다.
-
+NoExecution 효과를 사용하여 여기에 대처해 보겠습니다. 우선 이전 taint를 모두 제거합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-kubectl taint nodes --all=true color=blue:NoSchedule-
+oc adm taint node -l devnation=%userid% color=blue:NoSchedule-
 ----
 
-
-
-그런 다음 myboot의 다른 인스턴스를 배포합니다.(with no Tolerations):
-
+그런 다음 myboot의 다른 인스턴스를 배포합니다. (Tolerations 없이)
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -444,6 +424,8 @@ spec:
       labels:
         app: myboot
     spec:
+      nodeSelector:
+        devnation: %userid%
       containers:
       - name: myboot
         image: quay.io/rhdevelopers/myboot:v1
@@ -451,8 +433,6 @@ spec:
           - containerPort: 8080
 EOF
 ----
-
-
 
 Terminal#2에서 다음을 확인합니다.
 
@@ -463,7 +443,7 @@ watch -n 1 "oc get pods -o wide \
   | awk '{print \$1 \" \" \$2 \" \" \$3 \" \" \$5 \" \" \$7}' | column -t"
 ----
 
-
+Taint가 없는 노드에서 Toleration이 없는 Pod가 실행 중입니다.
 
 [.console-output]
 [source,bash]
@@ -473,34 +453,13 @@ myboot-7cbfbd9b89-wpddg   1/1     Running   47s   devnation-m02
 ----
 
 
-이제 Pod가 실행 중인 노드를 찾아보겠습니다.
-
-* *Terminal#1에서 실행*
-
-
-[.console-input]
-[source,bash,subs="+macros"]
-----
-NODE=$(kubectl get pod -o jsonpath='{.items[0].spec.nodeName}')
-echo ${NODE}
-----
-
-NOTE:  `.items[0]`은 모든 Pod를 요청하지만 목록에 요소가 하나만 포함된다는 것을 알고 있기 때문입니다.
-
-[.console-output]
-[source,bash]
-----
-"ip-10-0-146-109.eu-central-1.compute.internal"
-----
-
-
+이제 NoExecution 효과를 가진 Taint를 노드에 추가합니다.
 
 * *Terminal#1에서 수행*
-
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-kubectl taint node ${NODE} color=blue:NoExecute
+oc adm taint node -l devnation=%userid% color=blue:NoExecute
 ----
 
 이 작업을 수행하자마자 Terminal#2 watch에서 이 "일정 변경"이 발생하는 것을 볼 수 있어야 합니다.
@@ -513,7 +472,6 @@ NAME                      READY   STATUS              AGE   NODE
 myboot-7cbfbd9b89-5t24z   0/1     #ContainerCreating#   16s   devnation
 myboot-7cbfbd9b89-wpddg   1/1     #Terminating#         65m   devnation-m02
 ----
-
 
 [NOTE]
 ====
@@ -531,14 +489,12 @@ myboot-7cbfbd9b89-wpddg   1/1     #Terminating#         65m   devnation-m02
 oc delete deployment myboot
 ----
 
-
-NoExecute 오염을 제거합니다.
-
+NoExecute taint를 제거합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-kubectl taint node ${NODE} color=blue:NoExecute-
+oc adm taint node -l devnation=%userid% color=blue:NoExecute-
 ----
 
 
@@ -546,11 +502,12 @@ kubectl taint node ${NODE} color=blue:NoExecute-
 
 == Affinity & Anti-Affinity
 
-Node/Pod Affinity 및 Anti-affinity를 사용하여 Pod가 예약되는 위치를 변경하는 또 다른 방법이 있습니다. + 
-Pod가 실행될 수 있는 위치를 금지할 뿐만 아니라 Pod가 실행되어야 하는 위치를 선호하는 규칙을 만들 수 있습니다.
+Pod가 예약되는 위치를 변경하는 또 다른 방법으로 Node/Pod Affinity 및 Anti-affinity가 있습니다. + 
+이를 통해 Pod가 실행될 수 있는 위치를 금지할 뿐만 아니라 Pod가 실행되어야 하는 위치를 선호하는 규칙을 만들 수 있습니다.
 
-Pod와 노드 간의 유사성을 생성하는 것 외에도 Pod 간에 유사성을 생성할 수도 있습니다.  + 
-Pod 그룹이 항상 동일한 노드에 함께 배포되어야 한다고 결정할 수 있습니다. Pod 간의 중요한 네트워크 통신과 같은 이유 때문에 외부 네트워크 호출이나 공유 저장 장치를 피하려고 합니다.
+Pod와 노드 간의 Affinity을 생성하는 것 외에도, Pod 간에 Affinity을 생성할 수도 있습니다.  + 
+Pod 간에 Affinity을 생성하면 Pod 그룹이 항상 동일한 노드에 함께 배포되어야 한다고 결정할 수 있습니다. 
+Pod 간의 네트워크 통신이 중요하고, 외부 네트워크 호출이나 공유 스토리지 장치를 피하려는 경우에 이를 활용할 수 있습니다.
 
 
 === Node Affinity
@@ -565,19 +522,18 @@ spec:
       requiredDuringSchedulingIgnoredDuringExecution: #<.>
         nodeSelectorTerms:
         - matchExpressions:
-          - key: color
+          - key: labuser
             operator: In
             values:
-            - blue #<.>
+            - %userid% #<.>
       containers:
       - name: myboot
         image: quay.io/rhdevelopers/myboot:v1
 ----
-<.> 이 핵심은 스케줄링 중에 다음 사항을 사용해야 하지만 Pod가 실행된 후에는 고려하지 않는다는 점을 강조합니다.
-<.> `matchExpressions`는 이 Pod가 `blue` 값 세트에 `color`가 있는 모든 노드에 대해 선호도가 있음을 나타냅니다.
+<.> 이 key는 스케줄링 중에 다음 사항을 적용해야 하지만 Pod가 실행된 후에는 고려하지 않는다는 점을 강조합니다. 
+<.> `matchExpressions` 는 이 Pod가 `labuser=%userid%` 가 있는 모든 노드에 대해 선호도가 있음을 나타냅니다.
 
 이제 이를 배포해 보겠습니다.
-
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -604,10 +560,10 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: color
+              - key: labuser
                 operator: In
                 values:
-                - blue
+                - %userid%
       containers:
       - name: myboot
         image: quay.io/rhdevelopers/myboot:v1
@@ -616,8 +572,7 @@ spec:
 EOF
 ----
 
-
-그러면 감시 창에서 보류 상태의 Pod를 볼 수 있습니다.
+그러면 Terminal#2에서 보류 상태의 Pod를 볼 수 있습니다.
 
 ==Terminal#2에서 확인
 
@@ -628,50 +583,37 @@ NAME                      READY   STATUS    AGE   NODE
 myboot-546d4d9b45-7vgfc   0/1     #Pending#   6s    <none>
 ----
 
+선호도 표현식과 일치하도록 노드에 **레이블**을 만들어 보겠습니다.
 
-선호도 표현식과 일치하는 노드에 *레이블*을 만들어 보겠습니다.
-
-
-
-
-노드 목록을 가져옵니다.
-
+실습용 노드를 확인합니다.
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc get nodes
+oc get nodes -l devnation=%userid%
 ----
 
 [.console-output]
 [source,bash,subs="+attributes,+quotes"]
 ----
 NAME                                            STATUS   ROLES    AGE   VERSION
-ip-10-0-136-107.eu-central-1.compute.internal   Ready    master   26h   v1.16.2
-ip-10-0-140-186.eu-central-1.compute.internal   Ready    worker   26h   v1.16.2
-ip-10-0-141-128.eu-central-1.compute.internal   Ready    worker   25h   v1.16.2
-ip-10-0-146-109.eu-central-1.compute.internal   Ready    worker   25h   v1.16.2
-ip-10-0-150-226.eu-central-1.compute.internal   Ready    worker   26h   v1.16.2
-ip-10-0-155-122.eu-central-1.compute.internal   Ready    master   26h   v1.16.2
-ip-10-0-162-206.eu-central-1.compute.internal   Ready    worker   26h   v1.16.2
-ip-10-0-168-102.eu-central-1.compute.internal   Ready    master   26h   v1.16.2
+ip-10-0-136-107.eu-central-1.compute.internal   Ready    worker  26h   v1.16.2
 ----
 
-그런 다음 목록에서 레이블을 지정할 노드를 선택합니다
+그런 다음 해당 노드에 `labuser=%userid%` 레이블을 지정합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes,+quotes"]
 ----
-oc label nodes ip-10-0-150-226.eu-central-1.compute.internal  color=blue
+oc label nodes -l devnation=%userid% labuser=%userid%
 ----
-IMPORTANT: nodename은 실제 조회 된 목록에서 가져와야 합니다. +
-`color=blue` 이는 Pod의 어피니티와 일치합니다.
+
+`labuser=%userid%` 는 Pod의 Affinty와 일치합니다.
 
 [.console-output]
 [source,bash,subs="+attributes"]
 ----
-node/ip-10-0-150-226.eu-central-1.compute.internal labeled
+ip-10-0-136-107.eu-central-1.compute.internal labeled
 ----
-
 
 그런 다음 Terminal#2 창에서 출력이 다음과 같이 변경되어야 합니다.
 
@@ -684,29 +626,16 @@ myboot-546d4d9b45-7vgfc   0/1     #ContainerCreating#   15m   devnation-m02
 ----
 
 
-
-Pod가 실행 중인 노드에서 라벨을 삭제해 보겠습니다.
-
-
-먼저 Pod가 실행 중인 노드를 찾습니다.
-
-[.console-input]
-[source,bash,subs="+macros"]
-----
-NODE=$(kubectl get pod -o jsonpath='{.items[0].spec.nodeName}')
-echo ${NODE}
-----
-
-그런 다음 색상 라벨을 제거하세요.
+Pod가 실행 중인 노드에서 다시 라벨을 삭제해 보겠습니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc label nodes ${NODE} color-
+oc label nodes -l devnation=%userid% labuser-
 ----
 
 
-그리고 watch 출력이 *변경되지 않고* 실행 중인 경우 Pod가 계속 실행된다는 점을 확인하세요.
+그리고 watch 출력이 *변경되지 않고* 실행 중인 Pod가 계속 실행된다는 점을 확인하세요.
 
 * *Terminal#2*
 
@@ -718,21 +647,23 @@ myboot-546d4d9b45-7vgfc   1/1     Running   22m   devnation-m02
 ----
 
 
-Pod의 배포 사양에서 'requiredDuringSchedulingIgnoredDuringExecution'을 사용했기 때문에 이전 섹션의 taint처럼 작동하는 친화력을 얻었습니다. 즉, 규칙은 예약 단계에서 설정되지만 그 이후에는 무시됩니다(예: 일단 실행되면  ).  따라서 우리의 경우에는 Pod가 제거되지 않습니다. 다음은 _하드_ 규칙의 예입니다.
+Pod의 배포 사양에서 'requiredDuringSchedulingIgnoredDuringExecution'을 사용했기 때문에 이전 섹션의 taint처럼 작동하는 Affinity를 얻었습니다. 
+즉, 규칙은 예약 단계에서는 적용되지만 그 이후에는 무시됩니다(예: 일단 Pod가 실행된 후).  
+따라서 이 경우에는 Pod가 제거되지 않습니다. 
+
+Affinity에는 Hard Rule과 Soft Rule 옵션도 있는데, 아래와 같은 차이가 있습니다.
 
 .Hard Rule
 ****
-Kubernetes 스케줄러가 필수 라벨이 있는 노드를 찾지 못하면 Pod는 _Pending_ 상태로 알려줍니다.
+Kubernetes 스케줄러가 필수 레이블이 있는 노드를 찾지 못하면, Pod는 _Pending_ 상태를 유지합니다.
 ****
-
-_soft_ 규칙을 만드는 방법도 있습니다:
 
 .Soft Rule
 ****
-Kubernetes 스케줄러는 규칙과 일치하려고 시도하지만 가능한 경우.  하지만 그렇게 할 수 없는 경우 Pod는 모든 노드에 예약됩니다. 
+Kubernetes 스케줄러는 가능한한 규칙을 적용하려고 노력하지만, 그렇게 할 수 없는 경우 Pod는 모든 노드에 예약할 수 있습니다. 
 ****
 
-아래 예를 고려하십시오.
+아래 예시를 참고하세요.
 
 [.console-output]
 [source,yaml,subs="+macros,+attributes,+quotes"]
@@ -749,7 +680,7 @@ spec:
             values:
             - blue
 ----
-<.> _preferred_와 _required_라는 단어의 사용을 볼 수 있습니다.
+<.> _required_ 로 시작했던 Affinity와 다르게, _preferred_ 로 시작하는 Affinity를 볼 수 있습니다.
 
 
 ==== Clean Up
@@ -764,13 +695,9 @@ oc delete deployment myboot
 
 === Pod Affinity/Anti-Affinity
 
-
-
-Pod Affinity를 사용하여 새 Pod를 배포해 보겠습니다.  `{quick-open-file}`의 관련 부분을 참조하세요. 
-
+Pod Affinity를 사용하여 새 Pod를 배포해 보겠습니다. 
 
 [source, yaml]
-.{quick-open-file}
 ----
 spec:
   affinity:
@@ -785,12 +712,12 @@ spec:
             - myboot # <2>
   containers:
 ----
+<1> 노드 레이블 키입니다. 2개의 노드가 이 Key로 레이블이 지정되어 있고, 동일한 값을 갖는 경우, 스케줄러는 두 노드를 동일한 토폴로지에 있는 것으로 처리합니다. 이 경우 `hostname` 은 노드마다 다른 레이블입니다.
+<2> Affinity는 'app=myboot' 라벨이 지정된 Pod와 관련됩니다.
 
-<1> 노드 레이블 키입니다.  두 노드가 이 키로 레이블이 지정되고 동일한 값을 갖는 경우 스케줄러는 두 노드를 동일한 토폴로지에 있는 것으로 처리합니다.  이 경우 `hostname`은 노드마다 다른 레이블입니다.
-<2> 선호도는 'app=myboot' 라벨이 지정된 Pod와 관련됩니다.
+
 
 * *Terminal#1에서 수행*
-
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
@@ -836,8 +763,8 @@ NAME                      READY  STATUS   AGE    NODE
 myboot2-7c5f46cbc9-hwm2v  0/1    Pending  5h38m  <none>
 ----
 
-
-선호도 규칙과 일치하는 Pod를 찾을 수 없어 'myboot2' Pod가 보류 중입니다. 이 문제를 해결하려면 'app=myboot' 라벨이 지정된 'myboot' 애플리케이션을 배포해 보겠습니다.
+Affinity 규칙과 일치하는 Pod('app=myboot' 레이블이 지정된 Pod)를 찾을 수 없어 'myboot2' Pod가 보류 중입니다. 
+이 문제를 해결하기 위해해 'app=myboot' 라벨이 지정된 'myboot' 애플리케이션을 배포해 보겠습니다.
 
 * *Terminal#1에서 수행*
 
@@ -869,8 +796,7 @@ spec:
 EOF
 ----
 
-
-그러면 둘 다 시작되고 _동일한 노드_에서 실행되는 것을 볼 수 있습니다.
+그러면 둘 다 시작되고 _동일한 노드_ 에서 실행되는 것을 볼 수 있습니다.
 
 * *Terminal#2에서 확인*
 
@@ -906,11 +832,9 @@ spec:
 ----
 ====
 
-*Anti-affinity*는 두 개의 Pod가 동일한 노드에서 함께 실행되지 않도록 하는 데 사용됩니다.
+**Anti-affinity**는 두 개의 Pod가 동일한 노드에서 함께 실행되지 않도록 하는 데 사용됩니다.
 
-
-다른 Pod를 추가해 보겠습니다.  `{quick-open-file}`의 다음 부분에 집중하세요
-
+다른 Pod를 추가해 보겠습니다.  
 
 [.console-output]
 [source, yaml]
@@ -929,9 +853,8 @@ spec:
             - myboot
 ----
 
-이는 기본적으로 `app=myboot` 라벨이 있는 Pod가 있는 개별 노드(`topologyKey: kubernetes.io/hostname`)에서 이 Pod를 예약해서는 안 된다는 것을 의미합니다. 
-위의 반선호도 규칙을 사용하여 myboot3을 배포합니다.
-
+이는 기본적으로 `app=myboot` 레이블이 있는 Pod가 있는 개별 노드(`topologyKey: kubernetes.io/hostname`)에 이 Pod를 예약해서는 안 된다는 것을 의미합니다. 
+위의 Anti-affinity 규칙을 사용하여 myboot3을 배포합니다.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -971,7 +894,6 @@ spec:
 EOF
 ----
 
-
 그런 다음 Watch 창에서 무슨 일이 일어나는지 확인하세요.
 
 =
@@ -983,7 +905,6 @@ myboot-7cbfbd9b89-267k6   1/1    Running            10m    devnation-m02
 myboot2-7c5f46cbc9-hwm2v  1/1    Running            5h56m  devnation-m02
 myboot3-6f95c866f6-7kvdw  0/1    ContainerCreating  6s     #devnation# 
 ----
-
 
 하이라이트에서 볼 수 있듯이 'myboot3' Pod는 'myboot' Pod와 다른 노드에 배포됩니다.
 
